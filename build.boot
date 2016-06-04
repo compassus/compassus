@@ -38,14 +38,17 @@
 
 (ns-unmap 'boot.user 'test)
 
-(deftask test []
-  (set-env! :source-paths #(conj % "src/test"))
-  (test-cljs :js-env :node
-             :suite-ns 'compassus.runner
-             :exit? true))
+(deftask test
+  [e exit?     bool  "Enable flag."]
+  (let [exit? (cond-> exit?
+                (nil? exit?) not)]
+    (set-env! :source-paths #(conj % "src/test"))
+    (test-cljs :js-env :node
+               :suite-ns 'compassus.runner
+               :exit? exit?)))
 
 (deftask auto-test []
   (comp
     (watch)
     (speak)
-    (test)))
+    (test :exit? false)))
