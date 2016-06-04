@@ -1,11 +1,7 @@
 (ns compassus.runner
-  (:require [cljs.test :refer-macros [run-tests]]
-            [cljs.nodejs]
+  (:require [doo.runner :refer-macros [doo-tests]]
             [compassus.tests]))
 
 (enable-console-print!)
 
-(defn main []
-  (run-tests 'compassus.tests))
-
-(set! *main-cli-fn* main)
+(doo-tests 'compassus.tests)

@@ -40,7 +40,9 @@
 
 (deftask test []
   (set-env! :source-paths #(conj % "src/test"))
-  (test-cljs :js-env :node :suite-ns 'compassus.runner))
+  (test-cljs :js-env :node
+             :suite-ns 'compassus.runner
+             :exit? true))
 
 (deftask auto-test []
   (comp
