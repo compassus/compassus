@@ -8,7 +8,7 @@
                  [com.cemerick/piggieback     "0.2.1"          :scope "test"]
                  [pandeiro/boot-http          "0.7.3"          :scope "test"]
                  [adzerk/boot-cljs            "1.7.228-1"      :scope "test"]
-                 [adzerk/boot-cljs-repl       "0.3.1"          :scope "test"]
+                 [adzerk/boot-cljs-repl       "0.3.0"          :scope "test"]
                  [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"] 
                  [adzerk/boot-reload          "0.4.8"          :scope "test"]
                  [org.clojure/tools.nrepl     "0.2.12"         :scope "test"]
@@ -17,18 +17,20 @@
 
 (require
  '[adzerk.boot-cljs      :refer [cljs]]
- '[adzerk.boot-cljs-repl :as cr :refer [cljs-repl-env start-repl]]
+ '[adzerk.boot-cljs-repl :as cr :refer [cljs-repl start-repl]]
  '[adzerk.boot-reload    :refer [reload]]
  '[clojure.tools.namespace.repl :as repl]
  '[crisptrutski.boot-cljs-test :refer [test-cljs]]
  '[pandeiro.boot-http :refer [serve]])
+
+(deftask deps [])
 
 (deftask devcards []
   (set-env! :source-paths #(conj % "src/devcards"))
   (comp
     (serve)
     (watch)
-    (cljs-repl-env)
+    (cljs-repl)
     (reload)
     (speak)
     (cljs :source-map true :compiler-options {:devcards true})

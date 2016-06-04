@@ -4,6 +4,9 @@
             [compassus.core :as c]
             [cljsjs.react]))
 
+(deftest dummy
+  (is false))
+
 (defui Home
   static om/IQuery
   (query [this]
