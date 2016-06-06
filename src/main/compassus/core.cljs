@@ -1,11 +1,13 @@
 (ns compassus.core
   (:require [goog.object :as gobj]
-            [om.next :as om :refer-macros [ui]]))
+            [om.next :as om :refer-macros [ui]]
+            [om.next.impl.parser :as parser]))
 
 (defn get-reconciler [app]
   (-> app :config :reconciler))
 
 ;; TODO: this is the root-class, what about when it turns into a component?
+;; change name to `root-class`
 (defn app-root [app]
   "Return the application's root class."
   (-> app :config :root-class))
@@ -74,24 +76,67 @@
      (om/transact! reconciler (cond-> `[(update-route! {:route ~next-route})]
                                 queue? (conj ::route-data))))))
 
+(defn- infer-query
+  [{:keys [state query]} route]
+  (let [query (cond-> query
+                ;; not full-query
+                (map? query) (select-keys [route]))]
+    [query]))
+
+(defn dispatch
+  "Helper function for implementing the read and mutate multimethods.
+   Dispatches on the remote target and the parser dispatch key."
+  [{:keys [target]} key user-parser]
+  [target key])
+
+(defmulti read dispatch)
+
+(defmethod read :default
+  [{:keys [target] :as env} key user-parser]
+  (let [dispatch  [:default key]
+        submethod (get-method read dispatch)
+        this      (get-method read :default)]
+    (if (and submethod (not= submethod this))
+      (do
+        (-add-method read dispatch submethod)
+        (submethod env key user-parser))
+      (throw
+        (ex-info (str "Missing multimethod implementation for dispatch value " dispatch)
+          {:type :error/missing-method-implementation})))))
+
+(defmethod read [nil ::route]
+  [{:keys [state]} key _]
+  {:value (get @state key)})
+
+(defmethod read [nil ::route-data]
+  [{:keys [state ] :as env} key user-parser]
+  (let [st @state
+        [route _] (get st ::route)
+        query (infer-query env route)
+        ret (user-parser env query)] ;; (merge env {:parser user-parser})
+    {:value (get ret route)}))
+
+(defmethod read [:default ::route]
+  [{:keys [state]} key _]
+  {:value (get @state key)})
+
+(defmethod read [:default ::route-data]
+  [{:keys [state target ast] :as env} key user-parser]
+  (let [st @state
+        [route _] (get st ::route)
+        query (infer-query env route)
+        ret (user-parser env query target)]
+    (when-not (empty? ret)
+      {:remote (parser/expr->ast (:query ast))})))
+
 (defn- generate-parser-read [user-parser]
-  (fn read [{:keys [state query target] :as env} k params]
-    (let [st @state
-          top-level-prop? (nil? query)
-          [route _] (get st ::route)
-          query (cond-> query
-                  ;; not full-query
-                  (map? query) (select-keys [route]))]
-      {:value
-       (if top-level-prop?
-         (get st k)
-         (let [ret (user-parser (merge env {:parser user-parser}) [query] target)]
-           (get ret route)))})))
+  (fn [env key _]
+    (read env key user-parser)))
 
 (defn- generate-parser-mutate [user-parser]
-  (fn mutate [{:keys [state target ast] :as env} k params]
+  (fn mutate [{:keys [state target ast] :as env} key params]
     (let [tx [(om/ast->query ast)]
-          update-route? (symbol-identical? k 'compassus.core/update-route!)]
+          update-route? (symbol-identical? key 'compassus.core/update-route!)]
       (if update-route?
         (let [{:keys [route]} params]
           {:value {:keys [::route ::route-data]}
@@ -102,8 +147,6 @@
         (user-parser (assoc env :parser user-parser) tx target)))))
 
 ;; TODO:
-;; - probably need to make this a multimethod, because of ::route and ::route-data
-;; - check behavior for (not= target nil)
 ;; - check behavior for `full-query`
 (defn- make-parser [user-parser]
   (om/parser {:read (generate-parser-read user-parser)

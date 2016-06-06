@@ -157,8 +157,34 @@
                (get ::c/route-data))
            posts-init-state))))
 
+(defmulti remote-test-read om/dispatch)
+
+(defmethod remote-test-read :index
+  [{:keys [state query target ast] :as env} _ _]
+  (let [st @state]
+    (if (some st query)
+      {:value st}
+      {:remote true})))
+
+(deftest test-remote-integration
+  (let [app (c/application
+              {:routes {:index (c/index-route Home)
+                        :about About}
+               :reconciler-opts
+               {:state  (atom {})
+                :parser (om/parser {:read remote-test-read})
+                :send   (fn [_ cb]
+                          (cb init-state))}})
+        r (c/get-reconciler app)]
+    (is (= (om/gather-sends (om/to-env r)
+             (om/get-query (c/app-root app)) [:remote])
+           {:remote [{:index (om/get-query Home)}]}))
+    (c/mount! app nil)
+    (is (= (dissoc @(om/app-state (c/get-reconciler app)) ::c/route) init-state))))
+
 ;; TODOs:
 ;; - test remote calls to both read & mutate
+;; - remote mutations
 ;; - history
 ;; - secretary example
 ;; - bidi example
