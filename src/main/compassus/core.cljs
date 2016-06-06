@@ -74,7 +74,8 @@
          next-route (cond-> next-route
                       (keyword? next-route) (vector '_))]
      (om/transact! reconciler (cond-> `[(update-route! {:route ~next-route})]
-                                queue? (conj ::route-data))))))
+                                queue?
+                                (into (om/transform-reads reconciler [::route-data])))))))
 
 (defn- infer-query
   [{:keys [query]} route]
