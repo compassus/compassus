@@ -14,53 +14,13 @@
   (dc/start-devcard-ui!))
 
 ;; =============================================================================
-;; Examples
+;; Without normalization
 
 (defmulti read om/dispatch)
-(defmulti mutate om/dispatch)
 
 (defmethod read :default
   [{:keys [state query]} k _]
   {:value (get @state k)})
-
-#_(defmethod read :route/data
-  [{:keys [state query] :as env} k _]
-  (let [st @state
-        [handler route] (::c/route st)
-        route (cond-> route
-                (omu/unique-ident? route) pop)
-        query (cond-> query
-                ;; not full-query
-                (map? query) (get handler))]
-                                        ;(println "query" query "remote" (parser/query->ast query))
-    {:value (om/db->tree query st st)}))
-
-(defmethod read ::c/route-data
-   [{:keys [state query]} k _]
-   (let [st @state
-         route (get st ::c/route)
-         route (cond-> route
-                 (= (second route) '_) pop)]
-     {:value (get-in st route)}))
-
-
-;; (defmethod read :route/data
-;;    [{:keys [state query]} k _]
-;;    (let [st @state
-;;          route (get st :app/route)
-;;          route (cond-> route
-;;                  (= (second route) '_) pop)]
-;;      {:value (get-in st route)}))
-
-;; (defmethod read :app/route
-;;    [{:keys [state query]} k _]
-;;    (let [st @state]
-;;      {:value (get st k)}))
-
-;; (defmethod mutate 'change/route!
-;;   [{:keys [state]} _ {:keys [route]}]
-;;   {:value {:keys [:app/route]}
-;;    :action #(swap! state assoc :app/route route)})
 
 (defui Home
   static om/IQuery
@@ -84,23 +44,12 @@
         (dom/h3 nil title)
         (dom/p nil (str content))))))
 
-(def route->component
-  )
-
-(def route->factory
-  (zipmap (keys route->component)
-    (map om/factory (vals route->component))))
-
-(def route->query
-  (zipmap (keys route->component)
-    (map om/get-query (vals route->component))))
-
 (defn- change-route [c route e]
   (.preventDefault e)
-  (om/transact! c `[(~'change/route! {:route ~route})]))
+  (c/update-route! c route))
 
 (defn wrapper [{:keys [owner factory props]}]
-  (let [route "cena"]
+  (let [route (c/current-route owner)]
     (dom/div #js {:style #js {:margin "0 auto"
                               :height 250
                               :width 500
@@ -162,13 +111,156 @@
                :about/content "This is the about page, the place where one might write things about their own self."}})
 
 (def app
-  (c/application {:routes {:app/home Home
+  (c/application {:routes {:app/home (c/index-route Home)
                            :app/about About}
                   :wrapper wrapper
                   :reconciler-opts {:state (atom app-state)
-                                    :parser (om/parser {:read read :mutate mutate})}}))
+                                    :parser (om/parser {:read read})}}))
 
-(defcard example-page-card
+(defcard denormalized-simple-example
+  "An example without normalization."
   (dom-node
     (fn [_ node]
       (c/mount! app node))))
+
+;; =============================================================================
+;; With normalization
+
+(def notes-app-state
+  {:notes/list [{:id 0 :note/title "Some note" :note/content "The note's content"
+                 :note/authors [{:id 101 :user/name "Alice Brown"}]}
+                {:id 1 :note/title "Untitled" :note/content "TODOs this week"
+                 :note/authors [{:id 101 :user/name "Alice Brown"}]}]
+   :users/list [{:id 101 :user/name "Alice Brown" :user/notes [{:id 0} {:id 1}]}
+                {:id 102 :user/name "Bob Atkins" :user/notes []}]})
+
+(declare Note)
+
+(defui Author
+  static om/Ident
+  (ident [this {:keys [id]}]
+    [:user/by-id id])
+  static om/IQuery
+  (query [this]
+    [:id :user/name])
+  Object
+  (render [this]
+    (dom/span nil (-> (om/props this) :user/name))))
+
+(def author (om/factory Author {:keyfn :id}))
+
+(defui User
+  static om/Ident
+  (ident [this {:keys [id]}]
+    [:user/by-id id])
+  static om/IQuery
+  (query [this]
+    [:id :user/name {:user/notes (om/get-query Note)}])
+  Object
+  (render [this]
+    (let [{:keys [user/name user/notes]} (om/props this)]
+      (dom/li #js {:style #js {:marginBottom "40px"}}
+        (dom/p nil name)
+        (dom/h4 #js {:style #js {:marginLeft "15px"
+                                 :marginBottom "0px"}} "Notes owned:")
+        (dom/ul nil
+          (map #(dom/li #js {:key (:id %)} (:note/title %)) notes))))))
+
+(def user (om/factory User {:keyfn :id}))
+
+(defui Note
+  static om/Ident
+  (ident [this {:keys [id]}]
+    [:note/by-id id])
+  static om/IQuery
+  (query [this]
+    [:id :note/title :note/content {:note/authors (om/get-query Author)}])
+  Object
+  (render [this]
+    (let [{:keys [id note/title note/content note/authors]} (om/props this)]
+      (dom/div #js {:style #js {:border "1px solid black"
+                                :padding "10px"}}
+        (dom/h2 #js {:style #js {:marginBottom "10px"}} title)
+        (dom/h4 #js {:style #js {:marginTop "10px"}}
+          "owned by: "
+          (interpose ", " (map author authors)))
+        (dom/p nil content)
+        (dom/button #js {:onClick #(om/transact! this `[(note/share! {:note ~id
+                                                                      :user 102}) :users])}
+          "Add Bob to note")))))
+
+(def note (om/factory Note {:keyfn :id}))
+
+(defui NoteList
+  static om/IQuery
+  (query [this]
+    [{:notes/list (om/get-query Note)}])
+  Object
+  (render [this]
+    (let [{notes :notes/list} (om/props this)]
+      (dom/div #js {:style #js {:width "300px"
+                                :display "table-cell"
+                                :borderRight "black 1px solid"}}
+        (dom/h1 nil
+          "Notes   "
+          (dom/a #js {:href "#"
+                      :onClick #(change-route this :users %)}
+            "(See users)"))
+        (map note notes)))))
+
+(defui UserList
+  static om/IQuery
+  (query [this]
+    [{:users/list (om/get-query User)}])
+  Object
+  (render [this]
+    (let [{users :users/list} (om/props this)]
+      (dom/div #js {:style #js {:width "350px"
+                                :display "table-cell"
+                                :paddingLeft "30px"}}
+        (dom/h1 nil
+          "Users   "
+          (dom/a #js {:href "#"
+                      :onClick #(change-route this :notes %)}
+            "(See notes)"))
+        (map user users)))))
+
+(defmulti notes-read om/dispatch)
+(defmulti notes-mutate om/dispatch)
+
+(defmethod notes-read :default
+  [{:keys [state query]} k _]
+  (let [st @state]
+    {:value (om/db->tree query st st)}))
+
+(defn share-note [{:keys [note user]} state]
+  (-> state
+    (update-in [:note/by-id note :note/authors]
+      (fn [authors]
+        (cond-> authors
+          (not (some #{[:user/by-id user]} authors))
+          (conj [:user/by-id user]))))
+    (update-in [:user/by-id user :user/notes]
+      (fn [notes]
+        (cond-> notes
+          (not (some #{[:note/by-id note]} notes))
+          (conj [:note/by-id note]))))))
+
+(defmethod notes-mutate 'note/share!
+  [{:keys [state]} _ params]
+  {:action #(swap! state (partial share-note params))})
+
+(def notes-app
+  (c/application
+    {:routes {:notes NoteList
+              :users UserList}
+     :reconciler-opts {:state notes-app-state
+                       :parser (om/parser {:read notes-read
+                                           :mutate notes-mutate})}}))
+
+(defcard normalization-example
+  "An example without normalization."
+  (dom-node
+    (fn [_ node]
+      (c/mount! notes-app node))))
+
