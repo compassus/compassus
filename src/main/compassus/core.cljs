@@ -128,22 +128,47 @@
     (when-not (empty? ret)
       {:remote (parser/expr->ast (:query ast))})))
 
+(defmulti mutate dispatch)
+
+(defmethod mutate :default
+  [{:keys [target] :as env} key params]
+  (let [methods              (methods mutate)
+        [dispatch submethod] (if-let [method (get methods [:default key])]
+                               [[:default key] method]
+                               (if (nil? target)
+                                 [[target :default] (get methods [target :default])]
+                                 [[:default :default] (get methods [:default :default])]))]
+    (if submethod
+      (do
+        (-add-method mutate dispatch submethod)
+        (submethod env key params))
+      (throw
+        (ex-info (str "Missing multimethod implementation for dispatch value " dispatch)
+          {:type :error/missing-method-implementation})))))
+
+(defmethod mutate [nil :default]
+  [{:keys [ast user-parser] :as env} _ _]
+  (let [tx [(om/ast->query ast)]]
+    {:action #(user-parser env tx)}))
+
+(defmethod mutate [:default :default]
+  [{:keys [target ast user-parser] :as env} key params]
+  (let [tx [(om/ast->query ast)]]
+    {:remote (not (empty? (user-parser env tx target)))}))
+
+(defmethod mutate [:default 'compassus.core/update-route!]
+  [{:keys [state] :as env} key params user-parser]
+  (let [{:keys [route]} params]
+    {:value {:keys [::route ::route-data]}
+     :action #(swap! state assoc ::route route)}))
+
 (defn- generate-parser-read [user-parser]
   (fn [env key params]
     (read (assoc env :user-parser user-parser) key params)))
 
 (defn- generate-parser-mutate [user-parser]
-  (fn mutate [{:keys [state target ast] :as env} key params]
-    (let [tx [(om/ast->query ast)]
-          update-route? (symbol-identical? key 'compassus.core/update-route!)]
-      (if update-route?
-        (let [{:keys [route]} params]
-          {:value {:keys [::route ::route-data]}
-           :action #(swap! state assoc ::route route)})
-        ;; TODO: this is potentially a problem for returning mutation results
-        ;; maybe we need to wrap it inside an `:action` thunk
-        ;; probably also problematic
-        (user-parser (assoc env :parser user-parser) tx target)))))
+  (fn [env key params]
+    (mutate (assoc env :user-parser user-parser) key params)))
 
 (defn- make-parser [user-parser]
   (om/parser {:read   (generate-parser-read user-parser)

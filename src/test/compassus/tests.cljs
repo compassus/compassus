@@ -157,14 +157,18 @@
                (get ::c/route-data))
            posts-init-state))))
 
-(defmulti remote-test-read om/dispatch)
-
-(defmethod remote-test-read :index
+(defmulti local-parser-read om/dispatch)
+(defmethod local-parser-read :index
   [{:keys [state query target ast] :as env} _ _]
   (let [st @state]
     (if (some st query)
       {:value st}
       {:remote true})))
+
+(defmulti local-parser-mutate om/dispatch)
+(defmethod local-parser-mutate 'fire/missiles!
+  [_ _ _]
+  {:remote true})
 
 (deftest test-remote-integration
   (let [app (c/application
@@ -172,18 +176,22 @@
                         :about About}
                :reconciler-opts
                {:state  (atom {})
-                :parser (om/parser {:read remote-test-read})
-                :send   (fn [_ cb]
+                :parser (om/parser {:read   local-parser-read
+                                    :mutate local-parser-mutate})
+                :send   (fn [{:keys [remote]} cb]
                           (cb init-state))}})
         r (c/get-reconciler app)]
     (is (= (om/gather-sends (om/to-env r)
              (om/get-query (c/app-root app)) [:remote])
            {:remote [{:index (om/get-query Home)}]}))
     (c/mount! app nil)
-    (is (= (dissoc @(om/app-state (c/get-reconciler app)) ::c/route) init-state))))
+    (is (= (dissoc @(om/app-state (c/get-reconciler app)) ::c/route) init-state))
+    (is (= (om/gather-sends (om/to-env r)
+             '[(fire/missiles! {:how-many 42})] [:remote])
+           {:remote '[(fire/missiles! {:how-many 42})]}))))
+
 
 ;; TODOs:
-;; - remote mutations
 ;; - history
 ;; - secretary example
 ;; - bidi example
