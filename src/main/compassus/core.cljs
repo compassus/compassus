@@ -74,36 +74,41 @@
      (om/transact! reconciler (cond-> `[(update-route! {:route ~next-route})]
                                 queue? (conj ::route-data))))))
 
+(defn- generate-parser-read [user-parser]
+  (fn read [{:keys [state query target] :as env} k params]
+    (let [st @state
+          top-level-prop? (nil? query)
+          [route _] (get st ::route)
+          query (cond-> query
+                  ;; not full-query
+                  (map? query) (select-keys [route]))]
+      {:value
+       (if top-level-prop?
+         (get st k)
+         (let [ret (user-parser (merge env {:parser user-parser}) [query] target)]
+           (get ret route)))})))
+
+(defn- generate-parser-mutate [user-parser]
+  (fn mutate [{:keys [state target ast] :as env} k params]
+    (let [tx [(om/ast->query ast)]
+          update-route? (symbol-identical? k 'compassus.core/update-route!)]
+      (if update-route?
+        (let [{:keys [route]} params]
+          {:value {:keys [::route ::route-data]}
+           :action #(swap! state assoc ::route route)})
+        ;; TODO: this is potentially a problem for returning mutation results
+        ;; maybe we need to wrap it inside an `:action` thunk
+        ;; probably also problematic
+        (user-parser (assoc env :parser user-parser) tx target)))))
+
 ;; TODO:
 ;; - probably need to make this a multimethod, because of ::route and ::route-data
-;; - maybe separate this out into 2 or 3 fns
 ;; - check behavior for (not= target nil)
 ;; - check behavior for `full-query`
 (defn- make-parser [user-parser]
-  (letfn [(read [{:keys [state query target] :as env} k params]
-            (let [st @state
-                  top-level-prop? (nil? query)
-                  [route _] (get st ::route)
-                  query (cond-> query
-                          ;; not full-query
-                          (map? query) (select-keys [route]))]
-              {:value
-               (if top-level-prop?
-                 (get st k)
-                 (let [ret (user-parser (merge env {:parser user-parser}) [query] target)]
-                   (get ret route)))}))
-          (mutate [{:keys [state target ast] :as env} k params]
-            (let [tx [(om/ast->query ast)]
-                  update-route? (symbol-identical? k 'compassus.core/update-route!)]
-              (if update-route?
-                (let [{:keys [route]} params]
-                  {:value {:keys [::route ::route-data]}
-                   :action #(swap! state assoc ::route route)})
-                ;; TODO: this is potentially a problem for returning mutation results
-                ;; maybe we need to wrap it inside an `:action` thunk
-                ;; probably also problematic
-                (user-parser (assoc env :parser user-parser) tx target))))]
-    (om/parser {:read read :mutate mutate})))
+  (om/parser {:read (generate-parser-read user-parser)
+              :mutate (generate-parser-mutate user-parser)}))
+
 
 (defn- find-index-route [routes]
   (let [first-route (ffirst routes)
