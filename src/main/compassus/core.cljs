@@ -131,10 +131,13 @@
         state (if normalize?
                 (atom (merge (om/tree->db merged-query state true)
                              route-info))
-                (swap! state merge route-info))]
+                (doto state
+                  (swap! merge route-info)))]
     (merge reconciler-opts
            {:state state
-            :parser (make-parser parser)})))
+            :parser (make-parser parser)}
+           (when normalize?
+             {:normalize true}))))
 
 ;; TODO:
 ;; - should routes be idents or just keywords?
