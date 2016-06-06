@@ -85,20 +85,20 @@
 (defn dispatch
   "Helper function for implementing the read and mutate multimethods.
    Dispatches on the remote target and the parser dispatch key."
-  [{:keys [target]} key user-parser]
+  [{:keys [target]} key _]
   [target key])
 
 (defmulti read dispatch)
 
 (defmethod read :default
-  [{:keys [target] :as env} key user-parser]
+  [{:keys [target] :as env} key params]
   (let [dispatch  [:default key]
         submethod (get-method read dispatch)
         this      (get-method read :default)]
     (if (and submethod (not= submethod this))
       (do
         (-add-method read dispatch submethod)
-        (submethod env key user-parser))
+        (submethod env key params))
       (throw
         (ex-info (str "Missing multimethod implementation for dispatch value " dispatch)
           {:type :error/missing-method-implementation})))))
@@ -108,7 +108,7 @@
   {:value (get @state key)})
 
 (defmethod read [nil ::route-data]
-  [{:keys [state] :as env} key user-parser]
+  [{:keys [state user-parser] :as env} key params]
   (let [st @state
         [route _] (get st ::route)
         query (infer-query env route)
@@ -120,7 +120,7 @@
   {:value (get @state key)})
 
 (defmethod read [:default ::route-data]
-  [{:keys [state target ast] :as env} key user-parser]
+  [{:keys [state target ast user-parser] :as env} key params]
   (let [st @state
         [route _] (get st ::route)
         query (infer-query env route)
@@ -129,8 +129,8 @@
       {:remote (parser/expr->ast (:query ast))})))
 
 (defn- generate-parser-read [user-parser]
-  (fn [env key _]
-    (read env key user-parser)))
+  (fn [env key params]
+    (read (assoc env :user-parser user-parser) key params)))
 
 (defn- generate-parser-mutate [user-parser]
   (fn mutate [{:keys [state target ast] :as env} key params]
@@ -146,7 +146,7 @@
         (user-parser (assoc env :parser user-parser) tx target)))))
 
 (defn- make-parser [user-parser]
-  (om/parser {:read (generate-parser-read user-parser)
+  (om/parser {:read   (generate-parser-read user-parser)
               :mutate (generate-parser-mutate user-parser)}))
 
 (defn- find-index-route [routes]
