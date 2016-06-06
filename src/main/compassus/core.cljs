@@ -77,11 +77,9 @@
                                 queue? (conj ::route-data))))))
 
 (defn- infer-query
-  [{:keys [state query]} route]
-  (let [query (cond-> query
-                ;; not full-query
-                (map? query) (select-keys [route]))]
-    [query]))
+  [{:keys [query]} route]
+  [{route (cond-> query
+            (map? query) (get route))}])
 
 (defn dispatch
   "Helper function for implementing the read and mutate multimethods.
@@ -109,11 +107,11 @@
   {:value (get @state key)})
 
 (defmethod read [nil ::route-data]
-  [{:keys [state ] :as env} key user-parser]
+  [{:keys [state] :as env} key user-parser]
   (let [st @state
         [route _] (get st ::route)
         query (infer-query env route)
-        ret (user-parser env query)] ;; (merge env {:parser user-parser})
+        ret (user-parser env query)]
     {:value (get ret route)}))
 
 (defmethod read [:default ::route]
@@ -146,12 +144,9 @@
         ;; probably also problematic
         (user-parser (assoc env :parser user-parser) tx target)))))
 
-;; TODO:
-;; - check behavior for `full-query`
 (defn- make-parser [user-parser]
   (om/parser {:read (generate-parser-read user-parser)
               :mutate (generate-parser-mutate user-parser)}))
-
 
 (defn- find-index-route [routes]
   (let [first-route (ffirst routes)

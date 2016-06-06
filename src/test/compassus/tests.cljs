@@ -183,7 +183,6 @@
     (is (= (dissoc @(om/app-state (c/get-reconciler app)) ::c/route) init-state))))
 
 ;; TODOs:
-;; - test remote calls to both read & mutate
 ;; - remote mutations
 ;; - history
 ;; - secretary example
