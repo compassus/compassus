@@ -28,7 +28,7 @@
 
 (defn wrap-app [test-fn]
   (binding [*app* (c/application
-                    {:routes {:index Home
+                    {:routes {:index (c/index-route Home)
                               :about About}
                      :reconciler-opts
                      {:state (atom init-state)
