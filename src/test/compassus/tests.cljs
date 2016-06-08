@@ -167,11 +167,20 @@
 
 (defmulti local-parser-mutate om/dispatch)
 (defmethod local-parser-mutate 'fire/missiles!
-  [_ _ _]
+  [{:keys [target]} _ _]
   {:remote true})
 
+(defmulti remote-parser-read om/dispatch)
+(defmethod remote-parser-read :index
+  [_ _ _]
+  {:value init-state})
+
+(defmulti remote-parser-mutate om/dispatch)
+
 (deftest test-remote-integration
-  (let [app (c/application
+  (let [remote-parser (om/parser {:read   remote-parser-read
+                                  :mutate remote-parser-mutate})
+        app (c/application
               {:routes {:index (c/index-route Home)
                         :about About}
                :reconciler-opts
@@ -179,7 +188,7 @@
                 :parser (om/parser {:read   local-parser-read
                                     :mutate local-parser-mutate})
                 :send   (fn [{:keys [remote]} cb]
-                          (cb init-state))}})
+                          (cb (remote-parser {} remote)))}})
         r (c/get-reconciler app)]
     (is (= (om/gather-sends (om/to-env r)
              (om/get-query (c/app-root app)) [:remote])
@@ -188,8 +197,28 @@
     (is (= (dissoc @(om/app-state (c/get-reconciler app)) ::c/route) init-state))
     (is (= (om/gather-sends (om/to-env r)
              '[(fire/missiles! {:how-many 42})] [:remote])
-           {:remote '[(fire/missiles! {:how-many 42})]}))))
+           {:remote '[(fire/missiles! {:how-many 42})]}))
+    (om/transact! r '[(fire/missiles! {:how-many 3})])
+    (is (= (-> r :state deref :queued-sends)
+           {:remote '[(fire/missiles! {:how-many 3})]}))))
 
+(deftest test-override-merge
+  (let [remote-parser (om/parser {:read   remote-parser-read
+                                  :mutate remote-parser-mutate})
+        app (c/application
+              {:routes {:index (c/index-route Home)
+                        :about About}
+               :reconciler-opts
+               {:state  (atom {})
+                :parser (om/parser {:read   local-parser-read
+                                    :mutate local-parser-mutate})
+                :merge  (fn [reconciler state res query]
+                          (om/default-merge reconciler state {:foo res} query))
+                :send   (fn [{:keys [remote]} cb]
+                          (cb (remote-parser {} remote)))}})
+        r (c/get-reconciler app)]
+    (c/mount! app nil)
+    (is (contains? @(om/app-state (c/get-reconciler app)) :foo))))
 
 ;; TODOs:
 ;; - history

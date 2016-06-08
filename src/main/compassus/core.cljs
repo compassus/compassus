@@ -204,8 +204,13 @@
     (cond-> routes
       (instance? MetaFn class) (assoc index-route (gobj/get class "afn")))))
 
+(defn compassus-merge
+  [reconciler state res query]
+  (let [[route _] (get state ::route)]
+    (om/default-merge reconciler state (get res route) query)))
+
 (defn- process-reconciler-opts
-  [{:keys [state parser] :as reconciler-opts} route->component route-info]
+  [{merge* :merge :keys [state parser] :as reconciler-opts} route->component route-info]
   (let [normalize? (not (satisfies? IAtom state))
         merged-query (transduce (map om/get-query)
                        (completing into) [] (vals route->component))
@@ -219,7 +224,9 @@
            {:state state
             :parser (make-parser parser)}
            (when normalize?
-             {:normalize true}))))
+             {:normalize true})
+           (when-not merge*
+             {:merge compassus-merge}))))
 
 ;; TODO:
 ;; - should routes be idents or just keywords?
