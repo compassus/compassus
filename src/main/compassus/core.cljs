@@ -3,19 +3,17 @@
             [om.next :as om :refer-macros [ui]]
             [om.next.impl.parser :as parser]))
 
-(defn get-reconciler [app]
+(defn get-reconciler
+  "Returns the Om Next reconciler for the given Compassus application."
+  [app]
   (-> app :config :reconciler))
 
 ;; TODO: this is the root-class, what about when it turns into a component?
 ;; change name to `root-class`
-(defn app-root [app]
-  "Return the application's root class."
+(defn app-root
+  "Returns the application's root class."
+  [app]
   (-> app :config :root-class))
-
-(defn mount! [app target]
-  (let [reconciler (get-reconciler app)
-        root (app-root app)]
-    (om/add-root! reconciler root target)))
 
 (defn- make-root-class
   [{:keys [routes wrapper]}]
@@ -44,14 +42,30 @@
 
 (defrecord CompassusApplication [config state])
 
-(defn application? [x]
+(defn application?
+  "Returns true if x is a Compassus application"
+  [x]
   (instance? CompassusApplication x))
 
-(defn index-route [class]
+(defn mount!
+  "Given a Compassus application and a target root DOM node, mount the
+   application. Analogous to `om.next/add-root!`."
+  [app target]
+  {:pre [(application? app)]}
+  (let [reconciler (get-reconciler app)
+        root (app-root app)]
+    (om/add-root! reconciler root target)))
+
+(defn index-route
+  "Specifies that the given class is the index route of the application"
+  [class]
   {:pre [(fn? class)]}
   (vary-meta class assoc ::index-route true))
 
-(defn current-route [x]
+(defn current-route
+  "Returns the current application route. x might be the application,
+   the reconciler or a component instance."
+  [x]
   {:pre [(or (om/reconciler? x) (application? x) (om/component? x))]}
   (let [reconciler (cond-> x
                      (application? x) get-reconciler
@@ -63,6 +77,10 @@
 ;; - `set-route!` or `update-route!`?
 ;; - explore if calling `transact!` on the reconciler doesn't already perform follow-on reads
 (defn update-route!
+  "Given a reconciler, Compassus application or component, update the application's
+   route. `next-route` may be a keyword or an ident. Takes an optional third
+   options argument. Supported options are `queue?`, a boolean denoting if the
+   application root should be queued for re-render. Defaults to true."
   ([x next-route]
    (update-route! x next-route {:queue? true}))
   ([x next-route {:keys [queue?]}]
