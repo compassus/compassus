@@ -192,11 +192,10 @@
               :mutate (generate-parser-mutate user-parser)}))
 
 (defn- find-index-route [routes]
-  (let [first-route (ffirst routes)
-        index-route (reduce (fn [_ [k class]]
-                              (when (-> class meta ::index-route)
-                                (reduced k))) routes)]
-    (or index-route first-route)))
+  (reduce (fn [fst [k class]]
+            (if (-> class meta ::index-route)
+              (reduced k)
+              fst)) (ffirst routes) routes))
 
 (defn- normalize-routes [routes index-route]
   (let [class (get routes index-route)]
