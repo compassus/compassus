@@ -111,9 +111,8 @@
 (defmethod read :default
   [{:keys [target] :as env} key params]
   (let [dispatch  [:default key]
-        submethod (get-method read dispatch)
-        this      (get-method read :default)]
-    (if (and submethod (not= submethod this))
+        submethod (get (methods read) dispatch)]
+    (if submethod
       (do
         (-add-method read dispatch submethod)
         (submethod env key params))
