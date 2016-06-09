@@ -230,7 +230,40 @@
 
 ;; TODO:
 ;; - should routes be idents or just keywords?
-(defn application [{:keys [routes wrapper reconciler-opts] :as opts}]
+(defn application
+  "Construct a Compassus application from a configuration map.
+
+   Required parameters:
+
+     :routes          - a map of route handler (keyword) to the Om Next component
+                        that knows how to present that route. The function
+                        `compassus.core/index-route` must be used to define the
+                        application's starting route.
+
+                        Example: {:index (compassus/index-route Index)
+                                  :about About}
+
+     :reconciler-opts - a map of options used to construct the Om Next reconciler.
+                        Valid options can be found in the following link:
+
+                        https://github.com/omcljs/om/wiki/Documentation-%28om.next%29#reconciler-1
+
+   Optional parameters:
+
+     :wrapper         - a function or an Om Next component factory that will wrap
+                        all the routes in the application. Useful for applications
+                        that have a common layout for every route.
+
+                        It will be passed a map with the following keys (props in
+                        the case of a component factory):
+
+                        :owner   - the parent component instance
+
+                        :factory - the component factory for the current route
+
+                        :props   - the props for the current route.
+   "
+  [{:keys [routes wrapper reconciler-opts] :as opts}]
   (let [index-route (find-index-route routes)
         route-info  (cond-> index-route
                       (keyword? index-route) (vector '_))
