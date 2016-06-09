@@ -143,7 +143,7 @@
         query (infer-query env route)
         ret (user-parser env query target)]
     (when-not (empty? ret)
-      {:remote (parser/expr->ast (:query ast))})))
+      {:remote (parser/expr->ast (first query))})))
 
 (defmulti mutate dispatch)
 

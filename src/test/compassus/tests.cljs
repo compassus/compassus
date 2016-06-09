@@ -165,6 +165,13 @@
       {:value st}
       {:remote true})))
 
+(defmethod local-parser-read :about
+  [{:keys [state query target ast] :as env} _ _]
+  (let [st @state]
+    (if (some st query)
+      {:value st}
+      {:remote true})))
+
 (defmulti local-parser-mutate om/dispatch)
 (defmethod local-parser-mutate 'fire/missiles!
   [{:keys [target]} _ _]
@@ -200,7 +207,11 @@
            {:remote '[(fire/missiles! {:how-many 42})]}))
     (om/transact! r '[(fire/missiles! {:how-many 3})])
     (is (= (-> r :state deref :queued-sends)
-           {:remote '[(fire/missiles! {:how-many 3})]}))))
+           {:remote '[(fire/missiles! {:how-many 3})]}))
+    (c/update-route! app :about)
+    (is (= (om/gather-sends (om/to-env r)
+             (om/get-query (c/app-root app)) [:remote])
+           {:remote [{:about (om/get-query About)}]}))))
 
 (deftest test-override-merge
   (let [remote-parser (om/parser {:read   remote-parser-read
