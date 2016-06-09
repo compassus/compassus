@@ -231,6 +231,51 @@
     (c/mount! app nil)
     (is (contains? @(om/app-state (c/get-reconciler app)) :foo))))
 
+(def idents-state
+  {:item/by-id {0 {:id 0 :name "some item"}}})
+
+(defmulti ident-parser-read om/dispatch)
+
+(defmethod ident-parser-read :item/by-id
+  [{:keys [state query-root]} k _]
+  (if state
+    ;; local parser
+    (let [st @state
+          val (get-in st query-root)]
+      (if val
+        {:value val}
+        {:remote true}))
+    ;; remote parser
+    {:value idents-state}))
+
+(deftest test-ident-routes
+  (let [app (c/application
+              {:routes {:index Home
+                        [:item/by-id 0] (c/index-route About)}
+               :reconciler-opts
+               {:state  (atom idents-state)
+                :parser (om/parser {:read ident-parser-read})}})
+        r (c/get-reconciler app)
+        p (-> r :config :parser)]
+    (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/app-root app)))
+               (get ::c/route-data))
+           {:id 0
+           :name "some item"})))
+  (let [app-parser (om/parser {:read ident-parser-read})
+        app (c/application
+              {:routes {:index Home
+                        [:item/by-id 0] (c/index-route About)}
+               :reconciler-opts
+               {:state  {}
+                :parser app-parser
+                :send   (fn [{:keys [remote]} cb]
+                          (cb (app-parser {} remote)))}})
+        r (c/get-reconciler app)]
+    (c/mount! app nil)
+    (is (= (dissoc @(-> r :config :state) ::om/tables ::c/route)
+           idents-state))))
+
+
 ;; TODOs:
 ;; - history
 ;; - secretary example

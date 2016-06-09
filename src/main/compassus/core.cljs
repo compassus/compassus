@@ -1,6 +1,7 @@
 (ns compassus.core
   (:require [goog.object :as gobj]
             [om.next :as om :refer-macros [ui]]
+            [om.util :as util]
             [om.next.impl.parser :as parser]))
 
 (defn get-reconciler
@@ -28,7 +29,9 @@
       Object
       (render [this]
         (let [props (om/props this)
-              [route _] (::route props)
+              route (::route props)
+              route (cond-> route
+                      (util/unique-ident? route) first)
               route-data (::route-data props)
               factory (get route->factory route)]
           (if wrapper
@@ -127,7 +130,9 @@
 (defmethod read [nil ::route-data]
   [{:keys [state user-parser] :as env} key params]
   (let [st @state
-        [route _] (get st ::route)
+        route (get st ::route)
+        route (cond-> route
+                (util/unique-ident? route) first)
         query (infer-query env route)
         ret (user-parser env query)]
     {:value (get ret route)}))
@@ -139,7 +144,9 @@
 (defmethod read [:default ::route-data]
   [{:keys [state target ast user-parser] :as env} key params]
   (let [st @state
-        [route _] (get st ::route)
+        route (get st ::route)
+        route (cond-> route
+                (util/unique-ident? route) first)
         query (infer-query env route)
         ret (user-parser env query target)]
     (when-not (empty? ret)
@@ -204,7 +211,9 @@
 
 (defn compassus-merge
   [reconciler state res query]
-  (let [[route _] (get state ::route)]
+  (let [route (get state ::route)
+        route (cond-> route
+                (util/unique-ident? route) first)]
     (om/default-merge reconciler state (get res route) query)))
 
 (defn- process-reconciler-opts
@@ -226,8 +235,6 @@
            (when-not merge*
              {:merge compassus-merge}))))
 
-;; TODO:
-;; - should routes be idents or just keywords?
 (defn application
   "Construct a Compassus application from a configuration map.
 

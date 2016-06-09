@@ -104,8 +104,7 @@
         (factory props)))))
 
 (defonce app-state
-  {:app/route '[:app/home _]
-   :app/home {:home/title "Home page"
+  {:app/home {:home/title "Home page"
               :home/content "This is the homepage. There isn't a lot to see here."}
    :app/about {:about/title "About page"
                :about/content "This is the about page, the place where one might write things about their own self."}})
@@ -264,3 +263,129 @@
     (fn [_ node]
       (c/mount! notes-app node))))
 
+;; =============================================================================
+;; Idents example
+
+(defmulti idents-read om/dispatch)
+
+(defmethod idents-read :items
+  [{:keys [state query]} k _]
+  (let [st @state
+        res (om/db->tree query st st)]
+    {:value res}))
+
+(defmethod idents-read :item/by-id
+  [{:keys [state query query-root]} k _]
+  {:value (om/db->tree query query-root @state)})
+
+(defui Item
+  static om/Ident
+  (ident [this {:keys [id]}]
+    [:item/by-id id])
+  static om/IQuery
+  (query [this]
+    [:id :name])
+  Object
+  (render [this]
+    (let [{:keys [id name]} (om/props this)]
+      (dom/div nil
+        (dom/span nil name)))))
+
+(def item (om/factory Item))
+
+(defui ItemList
+  static om/IQuery
+  (query [this]
+    [{:item/list (om/get-query Item)}])
+  Object
+  (render [this]
+    (let [{:keys [item/list]} (om/props this)]
+      (dom/div nil
+        (dom/h3 nil "Item List")
+        (dom/ul nil
+          (map (fn [it] (dom/li nil (item it))) list))))))
+
+(defui Wrapper
+  Object
+  (render [this]
+    (let [{:keys [owner factory props]} (om/props this)
+          route (c/current-route this)]
+      (dom/div #js {:style #js {:margin "0 auto"
+                                :height 250
+                                :width 500
+                                :backgroundColor "oldlace"}}
+        (dom/div #js {:style #js {:minWidth "100%"
+                                  :minHeight "48px"
+                                  :lineHeight "48px"
+                                  :verticalAlign "middle"
+                                  :borderBottomWidth "2px"
+                                  :borderBottomStyle "solid"}}
+          (dom/h2 #js {:style #js {:margin 0
+                                   :textAlign "center"
+                                   :lineHeight "48px"}}
+            "Om Next Routing"))
+        (dom/div #js {:style #js {:display "inline-block"
+                                  :width "25%"
+                                  :minHeight "80%"
+                                  :verticalAlign "top"
+                                  :backgroundColor "gainsboro"}}
+          (dom/ul nil
+            (dom/li #js {:style #js {:marginTop "20px"}}
+              (dom/a #js {:href "#"
+                          :style (when (= (first route) :items)
+                                   #js {:color "black"
+                                        :cursor "text"})
+                          :onClick #(change-route owner :items %)}
+                "ItemList"))
+            (dom/li #js {:style #js {:marginTop "5px"}}
+              (dom/a #js {:href "#"
+                          :style (when (= (first route) :item/by-id)
+                                   #js {:color "black"
+                                        :cursor "text"})
+                          :onClick #(change-route owner [:item/by-id 0] %)}
+                "Item 0")))
+          (dom/p #js {:style #js {:textAlign "center"
+                                  :textDecoration "underline"
+                                  :marginBottom "5px"
+                                  :marginTop "30px"
+                                  :fontWeight "bold"}}
+            "Current route:")
+          (dom/p #js {:style #js {:textAlign "center"
+                                  :margin 0
+                                  :color "red"}}
+            (str (pr-str route))))
+        (dom/div #js {:style #js {:display "inline-block"
+                                  :width "70%"
+                                  :minHeight "70%"
+                                  :verticalAlign "top"
+                                  :padding "12.5px 12.5px 12.5px 10.5px"
+                                  :borderLeftWidth "2px"
+                                  :borderLeftStyle "solid"}}
+          (factory props))))))
+
+(def idents-wrapper (om/factory Wrapper))
+
+(defonce idents-app-state
+  {:item/list [{:id 0 :name "Item 0"}
+               {:id 1 :name "Item 1"}
+               {:id 2 :name "Item 2"}]})
+
+(def idents-app
+  (c/application {:routes {:items (c/index-route ItemList)
+                           [:item/by-id 0] Item}
+                  :wrapper idents-wrapper
+                  :reconciler-opts {:state idents-app-state
+                                    :parser (om/parser {:read idents-read})}}))
+
+(defcard idents-example
+  "## Idents in routes
+
+  You can also specify routes as idents. In this case, the app routes are:
+  ```clojure
+  {:items (c/index-route ItemList)
+  [:item/by-id 0] Item}
+  ```
+  "
+  (dom-node
+    (fn [_ node]
+      (c/mount! idents-app node))))
