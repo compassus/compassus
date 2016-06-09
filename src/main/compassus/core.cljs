@@ -16,6 +16,10 @@
   [app]
   (-> app :config :root-class))
 
+(defn- unwrap-route [route]
+  (cond-> route
+    (util/unique-ident? route) first))
+
 (defn- make-root-class
   [{:keys [routes wrapper]}]
   (let [route->query   (zipmap (keys routes)
@@ -29,9 +33,7 @@
       Object
       (render [this]
         (let [props (om/props this)
-              route (::route props)
-              route (cond-> route
-                      (util/unique-ident? route) first)
+              route (unwrap-route (::route props))
               route-data (::route-data props)
               factory (get route->factory route)]
           (if wrapper
@@ -130,9 +132,7 @@
 (defmethod read [nil ::route-data]
   [{:keys [state user-parser] :as env} key params]
   (let [st @state
-        route (get st ::route)
-        route (cond-> route
-                (util/unique-ident? route) first)
+        route (unwrap-route (get st ::route))
         query (infer-query env route)
         ret (user-parser env query)]
     {:value (get ret route)}))
@@ -144,9 +144,7 @@
 (defmethod read [:default ::route-data]
   [{:keys [state target ast user-parser] :as env} key params]
   (let [st @state
-        route (get st ::route)
-        route (cond-> route
-                (util/unique-ident? route) first)
+        route (unwrap-route (get st ::route))
         query (infer-query env route)
         ret (user-parser env query target)]
     (when-not (empty? ret)
@@ -211,9 +209,7 @@
 
 (defn compassus-merge
   [reconciler state res query]
-  (let [route (get state ::route)
-        route (cond-> route
-                (util/unique-ident? route) first)]
+  (let [route (unwrap-route (get state ::route))]
     (om/default-merge reconciler state (get res route) query)))
 
 (defn- process-reconciler-opts
