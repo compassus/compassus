@@ -7,6 +7,10 @@ A routing library for Om Next.
 - [Installation](#installation)
 - [Guide](#guide)
   - [Declaring routes](#declaring-routes)
+  - [Assembling a Compassus application](#assembling-a-compassus-application)
+    - [Utility functions](#utility-functions)
+  - [Changing routes](#changing-routes)
+- [Documentation](#documentation)
 - [Copyright & License](#copyright--license)
 
 ## Installation
@@ -34,12 +38,12 @@ To get started, require Compassus somewhere in your project.
 ```clojure
 (ns my-app.core
   (:require [om.next :as om :refer-macros [defui]]
-            [compassus.core :as c))
+            [compassus.core :as compassus))
 ```
 
 ### Declaring routes
 
-Your application's routes are represented by a map which keys are keywords (identifying the routes in your application) and the values are the respective Om Next component classes. The following example shows the routes for a simple application that has 2 routes, `:index` and `:about`:
+Your application's routes are represented by a map in which the keys are keywords (identifying the route handlers of your application) and the values are the respective Om Next component classes. The following example shows the routes for a simple application that has 2 routes, `:index` and `:about`:
 
 ```clojure
 (defui Index
@@ -52,6 +56,125 @@ Your application's routes are represented by a map which keys are keywords (iden
   {:index Index
    :about About})
 ```
+
+To specify the initial route of the application, wrap its component class in a `index-route` call as shown below.
+
+```clojure
+(defui Index
+  ...)
+
+(defui About
+  ...)
+
+(def routes
+  ;; :index is the initial route of the application
+  {:index (compassus/index-route Index)
+   :about About})
+```
+
+Routes can be keywords. But they can also be idents. Below is an example route definition that uses an ident as the route key.
+
+``` clojure
+(defui Item
+  ...)
+
+(defui ItemList
+  ...)
+
+{:items (c/index-route ItemList)
+ [:item/by-id 0] Item}
+```
+
+### Assembling a Compassus application
+
+Creating a Compassus application is done by calling the `application` function. This function accepts a configuration map that should contain your routes and the options to pass to the Om Next reconciler. Compassus will instantiate the reconciler for you. Here's an example:
+
+``` clojure
+(defui Index
+  ...)
+
+(defui About
+  ...)
+
+(def app
+  (compassus/application
+    {:routes {:index (compassus/index-route Index)
+              :about About}
+     :reconciler-opts {:state {}
+                       :parser (om/parser {:read read))
+```
+
+The configuration map you pass to `compassus.core/application` can also contain an optional `:wrapper` key. This should either be an Om Next component factory or a function that will receive a map with `owner`, `factory` and `props` as argument. It becomes useful to specify a wrapper whenever you want to define common presentation logic for all the routes in an application.
+
+
+#### Utility functions
+
+There are a few utility functions in `compassus.core`. Below is a description of these functions along with simple examples of their usage.
+
+##### **`root-class`**
+
+Return the Compassus application's root class.
+
+``` clojure
+(compasssus/root-class app)
+```
+
+##### **`mount!`**
+
+Mount a compassus application in the DOM.
+
+``` clojure
+(compassus/mount! app (js/document.getElementById "app"))
+```
+
+##### **`get-reconciler`**
+
+Get the reconciler for the Compassus application.
+
+``` clojure
+(compassus/get-reconciler app)
+```
+
+##### **`application?`**
+
+Returns true if the argument is a Compassus application.
+
+``` clojure
+(compassus/application? app)
+;; true
+```
+
+##### **`current-route`**
+
+Returns the current application route.
+
+``` clojure
+(compassus/current-route app)
+```
+
+
+### Changing routes
+
+To change the current route of a Compassus application, call the function `set-route!`. An example follows:
+
+``` clojure
+;; the argument to `set-route!` can be one of: a Compassus application, an
+;; Om Next component or an Om Next reconciler
+
+(compassus/set-route! app :about)
+
+(compassus/set-route! reconciler :about)
+
+(compassus/set-route! this :about)
+```
+
+### Integrating browser history
+
+## Documentation
+
+There's documentation [here](). link to codox
+
+There are also devcards examples [here](). link to built devcards examples
 
 ## Copyright & License
 
