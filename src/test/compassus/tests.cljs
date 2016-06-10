@@ -71,7 +71,7 @@
 (deftest test-get-current-route
   (is (thrown-with-msg? js/Error #"Assert failed:" (c/current-route nil)))
   (is (thrown-with-msg? js/Error #"Assert failed:" (c/current-route 2)))
-  (is (= (c/current-route *app*) '[:index _])))
+  (is (= (c/current-route *app*) :index)))
 
 (deftest test-index-route
   (let [app1 (c/application
@@ -89,17 +89,17 @@
     (is (thrown-with-msg? js/Error #"Assert failed:" (c/index-route nil)))
     (is (thrown-with-msg? js/Error #"Assert failed:" (c/index-route app1)))
     (is (thrown-with-msg? js/Error #"Assert failed:" (c/index-route (c/get-reconciler app1))))
-    (is (= (c/current-route app1) '[:about _]))
-    (is (= (c/current-route app2) '[:index _]))))
+    (is (= (c/current-route app1) :about))
+    (is (= (c/current-route app2) :index))))
 
 (deftest test-parsing
   (testing "generate parser"
     (let [user-parser (om/parser {:read app-read})
           om-parser (c/make-parser user-parser)
-          st (merge init-state {::c/route '[:index _]})]
+          st (merge init-state {::c/route :index})]
       (is (fn? om-parser))
       (is (= (om-parser {:state (atom st)} (om/get-query (c/app-root *app*)))
-             {::c/route '[:index _]
+             {::c/route :index
               ::c/route-data init-state}))))
   (testing "parser integration in compassus app"
     (let [user-parser (-> *app* :config :parser)
@@ -116,7 +116,7 @@
   (let [prev-route (c/current-route *app*)]
     (c/set-route! *app* :about {:queue? false})
     (is (not= prev-route (c/current-route *app*)))
-    (is (= (c/current-route *app*) '[:about _]))))
+    (is (= (c/current-route *app*) :about))))
 
 (defui Post
   static om/Ident

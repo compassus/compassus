@@ -16,10 +16,6 @@
   [app]
   (-> app :config :root-class))
 
-(defn- unwrap-route [route]
-  (cond-> route
-    (util/unique-ident? route) first))
-
 (defn- make-root-class
   [{:keys [routes wrapper]}]
   (let [route->query   (zipmap (keys routes)
@@ -33,7 +29,7 @@
       Object
       (render [this]
         (let [props (om/props this)
-              route (unwrap-route (::route props))
+              route (::route props)
               route-data (::route-data props)
               factory (get route->factory route)]
           (if wrapper
@@ -87,12 +83,10 @@
    (set-route! x next-route {:queue? true}))
   ([x next-route {:keys [queue?]}]
    {:pre [(or (om/reconciler? x) (application? x) (om/component? x))
-          (or (vector? next-route) (keyword? next-route))]}
+          (or (util/ident? next-route) (keyword? next-route))]}
    (let [reconciler (cond-> x
                       (application? x) get-reconciler
-                      (om/component? x) om/get-reconciler)
-         next-route (cond-> next-route
-                      (keyword? next-route) (vector '_))]
+                      (om/component? x) om/get-reconciler)]
      (om/transact! reconciler (cond-> `[(set-route! {:route ~next-route})]
                                 queue?
                                 (into (om/transform-reads reconciler [::route-data])))))))
@@ -129,7 +123,7 @@
 (defmethod read [nil ::route-data]
   [{:keys [state user-parser] :as env} key params]
   (let [st @state
-        route (unwrap-route (get st ::route))
+        route (get st ::route)
         query (infer-query env route)
         ret (user-parser env query)]
     {:value (get ret route)}))
@@ -141,7 +135,7 @@
 (defmethod read [:default ::route-data]
   [{:keys [state target ast user-parser] :as env} key params]
   (let [st @state
-        route (unwrap-route (get st ::route))
+        route (get st ::route)
         query (infer-query env route)
         ret (user-parser env query target)]
     (when-not (empty? ret)
@@ -206,15 +200,15 @@
 
 (defn compassus-merge
   [reconciler state res query]
-  (let [route (unwrap-route (get state ::route))]
+  (let [route (get state ::route)]
     (om/default-merge reconciler state (get res route) query)))
 
 (defn- process-reconciler-opts
-  [{merge* :merge :keys [state parser] :as reconciler-opts} route->component route-info]
+  [{merge* :merge :keys [state parser] :as reconciler-opts} route->component index-route]
   (let [normalize? (not (satisfies? IAtom state))
         merged-query (transduce (map om/get-query)
                        (completing into) [] (vals route->component))
-        route-info {::route route-info}
+        route-info {::route index-route}
         state (if normalize?
                 (atom (merge (om/tree->db merged-query state true)
                              route-info))
@@ -263,10 +257,8 @@
    "
   [{:keys [routes wrapper reconciler-opts] :as opts}]
   (let [index-route (find-index-route routes)
-        route-info  (cond-> index-route
-                      (keyword? index-route) (vector '_))
         route->component (normalize-routes routes index-route)
-        reconciler-opts' (process-reconciler-opts reconciler-opts route->component route-info)
+        reconciler-opts' (process-reconciler-opts reconciler-opts route->component index-route)
         reconciler (om/reconciler reconciler-opts')
         opts' (merge opts {:routes route->component
                            :reconciler-opts reconciler-opts'})]
