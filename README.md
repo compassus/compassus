@@ -10,6 +10,7 @@ A routing library for Om Next.
   - [Assembling a Compassus application](#assembling-a-compassus-application)
     - [Utility functions](#utility-functions)
   - [Changing routes](#changing-routes)
+  - [Integrating with browser history](#integrating-with-browser-history)
 - [Documentation](#documentation)
 - [Copyright & License](#copyright--license)
 
@@ -168,7 +169,77 @@ To change the current route of a Compassus application, call the function `set-r
 (compassus/set-route! this :about)
 ```
 
-### Integrating browser history
+### Integrating with browser history
+
+URL (or path) navigation is an orthogonal concern to routing in Om Next components, which is mainly about swapping components in and out according to the selected route. However, it might be desirable for applications to setup history navigation only when the application mounts. In addition, applications might also want to teardown history if the application unmounts from the DOM. Thus, the configuration map passed to `compassus.core/application` also accepts a `:history` key which should contain a map with the following keys:
+
+- `:setup` - a function of no arguments that will be called when the application mounts in the DOM.
+
+- `:teardown` - optional. a function of no arguments that will be called when the application unmounts from the DOM.
+
+Below are examples using Bidi + Pushy, and Secretary + `goog.History`.
+
+
+#### [Bidi](https://github.com/juxt/bidi) + [Pushy](https://github.com/kibu-australia/pushy) example
+
+``` clojure
+(ns my-ns
+  (:require [om.next :as om :refer-macros [defui]]
+            [compassus.core :as compassus]
+            [bidi.bidi :as bidi]
+            [pushy.core :as pushy]))
+
+(def bidi-routes
+  ["/" {""      :index
+        "about" :about}])
+
+(declare app)
+
+(def history
+  (pushy/pushy #(compassus/set-route! app (:handler %))
+    (partial bidi/match-route bidi-routes)))
+
+(def app
+  (compassus/application
+    {:routes  {:index (compassus/index-route Index)
+               :about About}
+     :history {:setup    #(pushy/start! history)
+               :teardown #(pushy/stop! history)}})
+```
+
+#### [Secretary](https://github.com/gf3/secretary) + `goog.History` example
+
+``` clojure
+(ns my-ns
+  (:require [om.next :as om :refer-macros [defui]]
+            [compassus.core :as compassus]
+            [secretary.core :as secretary]
+            [goog.history.EventType :as EventType]
+            [goog.events :as evt]])
+  (:import goog.History))
+
+(declare app)
+
+(defroute index "/" []
+  (compassus/set-route! app :index))
+
+(defroute about "/about" []
+  (compassus/set-route! app :about))
+
+(def event-key (atom nil))
+(def history
+  (History.))
+
+(def app
+  (compassus/application
+    {:routes  {:index (compassus/index-route Index)
+               :about About}
+     :history {:setup (fn []
+                        (reset! event-key
+                          (evt/listen history EventType/NAVIGATE #(secretary/dispatch! (.-token %))))
+                        (.setEnabled history true))
+               :teardown #(evt/unlistenByKey @event-key)}})
+```
 
 ## Documentation
 
