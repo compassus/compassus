@@ -61,12 +61,6 @@ Your application's routes are represented by a map in which the keys are keyword
 To specify the initial route of the application, wrap its component class in a `index-route` call as shown below.
 
 ```clojure
-(defui Index
-  ...)
-
-(defui About
-  ...)
-
 (def routes
   ;; :index is the initial route of the application
   {:index (compassus/index-route Index)
@@ -91,12 +85,6 @@ Routes can be keywords. But they can also be idents. Below is an example route d
 Creating a Compassus application is done by calling the `application` function. This function accepts a configuration map that should contain your routes and the options to pass to the Om Next reconciler. Compassus will instantiate the reconciler for you. Here's an example:
 
 ``` clojure
-(defui Index
-  ...)
-
-(defui About
-  ...)
-
 (def app
   (compassus/application
     {:routes {:index (compassus/index-route Index)
