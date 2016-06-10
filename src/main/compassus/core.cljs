@@ -63,7 +63,7 @@
   "Specifies that the given class is the index route of the application"
   [class]
   {:pre [(fn? class)]}
-  (vary-meta class assoc ::index-route true))
+  (with-meta {:class class} {::index-route true}))
 
 (defn current-route
   "Returns the current application route. x might be the application,
@@ -198,8 +198,7 @@
 (defn- normalize-routes [routes index-route]
   (let [class (get routes index-route)]
     (cond-> routes
-      (instance? MetaFn class) (assoc index-route (or (gobj/get class "afn")
-                                                      (gobj/get class "$afn$"))))))
+      (map? class) (assoc index-route (:class class)))))
 
 (defn compassus-merge
   [reconciler state res query]
