@@ -9,9 +9,7 @@
   [app]
   (-> app :config :reconciler))
 
-;; TODO: this is the root-class, what about when it turns into a component?
-;; change name to `root-class`
-(defn app-root
+(defn root-class
   "Returns the application's root class."
   [app]
   (-> app :config :root-class))
@@ -54,7 +52,7 @@
   [app target]
   {:pre [(application? app)]}
   (let [reconciler (get-reconciler app)
-        root (app-root app)]
+        root (root-class app)]
     (om/add-root! reconciler root target)))
 
 (defn index-route

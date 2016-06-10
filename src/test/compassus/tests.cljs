@@ -49,9 +49,9 @@
                    om/app-state
                    deref)
         ::c/route))
-  (is (some? (c/app-root *app*)))
-  (is (some? (.. (c/app-root *app*) -prototype)))
-  (is (true? (.. (c/app-root *app*) -prototype -om$isComponent))))
+  (is (some? (c/root-class *app*)))
+  (is (some? (.. (c/root-class *app*) -prototype)))
+  (is (true? (.. (c/root-class *app*) -prototype -om$isComponent))))
 
 (deftest test-make-root-class
   (let [root (c/make-root-class {:routes {:index Home
@@ -98,7 +98,7 @@
           om-parser (c/make-parser user-parser)
           st (merge init-state {::c/route :index})]
       (is (fn? om-parser))
-      (is (= (om-parser {:state (atom st)} (om/get-query (c/app-root *app*)))
+      (is (= (om-parser {:state (atom st)} (om/get-query (c/root-class *app*)))
              {::c/route :index
               ::c/route-data init-state}))))
   (testing "parser integration in compassus app"
@@ -153,7 +153,7 @@
         r (c/get-reconciler app)
         p (-> r :config :parser)]
     (is (not= posts-init-state (dissoc @(om/app-state r) ::c/route)))
-    (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/app-root app)))
+    (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
                (get ::c/route-data))
            posts-init-state))))
 
@@ -211,7 +211,7 @@
                           (cb (remote-parser {} remote)))}})
         r (c/get-reconciler app)]
     (is (= (om/gather-sends (om/to-env r)
-             (om/get-query (c/app-root app)) [:remote])
+             (om/get-query (c/root-class app)) [:remote])
            {:remote [{:index (om/get-query Home)}]}))
     (c/mount! app nil)
     (is (= (dissoc @(om/app-state (c/get-reconciler app)) ::c/route) init-state))
@@ -223,11 +223,11 @@
            {:remote '[(fire/missiles! {:how-many 3})]}))
     (c/set-route! app :about)
     (is (= (om/gather-sends (om/to-env r)
-             (om/get-query (c/app-root app)) [:remote])
+             (om/get-query (c/root-class app)) [:remote])
            {:remote [{:about (om/get-query About)}]}))
     (c/set-route! app :other)
     (is (= (om/gather-sends (om/to-env r)
-             (om/get-query (c/app-root app)) [:remote])
+             (om/get-query (c/root-class app)) [:remote])
            {:remote [{:other [:changed/key :updated/ast]}]}))))
 
 (deftest test-override-merge
@@ -274,7 +274,7 @@
                 :parser (om/parser {:read ident-parser-read})}})
         r (c/get-reconciler app)
         p (-> r :config :parser)]
-    (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/app-root app)))
+    (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
                (get ::c/route-data))
            {:id 0
            :name "some item"})))
