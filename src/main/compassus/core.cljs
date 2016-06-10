@@ -198,7 +198,8 @@
 (defn- normalize-routes [routes index-route]
   (let [class (get routes index-route)]
     (cond-> routes
-      (instance? MetaFn class) (assoc index-route (gobj/get class "afn")))))
+      (instance? MetaFn class) (assoc index-route (or (gobj/get class "afn")
+                                                      (gobj/get class "$afn$"))))))
 
 (defn compassus-merge
   [reconciler state res query]
