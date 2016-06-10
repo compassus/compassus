@@ -72,17 +72,17 @@
         (dom/ul nil
           (dom/li #js {:style #js {:marginTop "20px"}}
             (dom/a #js {:href "#"
-                        :style (when (= (first route) :app/home)
+                        :style (when (= route :app/home)
                                  #js {:color "black"
                                       :cursor "text"})
-                        :onClick #(change-route owner '[:app/home _] %)}
+                        :onClick #(change-route owner :app/home %)}
               "Home"))
           (dom/li #js {:style #js {:marginTop "5px"}}
             (dom/a #js {:href "#"
-                        :style (when (= (first route) :app/about)
+                        :style (when (= route :app/about)
                                  #js {:color "black"
                                       :cursor "text"})
-                        :onClick #(change-route owner '[:app/about _] %)}
+                        :onClick #(change-route owner :app/about %)}
               "About")))
         (dom/p #js {:style #js {:textAlign "center"
                                 :textDecoration "underline"
@@ -332,14 +332,14 @@
           (dom/ul nil
             (dom/li #js {:style #js {:marginTop "20px"}}
               (dom/a #js {:href "#"
-                          :style (when (= (first route) :items)
+                          :style (when (= route :items)
                                    #js {:color "black"
                                         :cursor "text"})
                           :onClick #(change-route owner :items %)}
                 "ItemList"))
             (dom/li #js {:style #js {:marginTop "5px"}}
               (dom/a #js {:href "#"
-                          :style (when (= (first route) :item/by-id)
+                          :style (when (= route :item/by-id)
                                    #js {:color "black"
                                         :cursor "text"})
                           :onClick #(change-route owner [:item/by-id 0] %)}
