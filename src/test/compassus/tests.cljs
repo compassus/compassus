@@ -108,13 +108,13 @@
       (is (some? om-parser))
       (is (not= user-parser om-parser)))))
 
-(deftest test-update-route!
-  (is (thrown-with-msg? js/Error #"Assert failed:" (c/update-route! nil :about)))
-  (is (thrown-with-msg? js/Error #"Assert failed:" (c/update-route! 3 :about)))
-  (is (thrown-with-msg? js/Error #"Assert failed:" (c/update-route! "foo" :about)))
-  (is (thrown-with-msg? js/Error #"Assert failed:" (c/update-route! "foo" :about {:queue? true})))
+(deftest test-set-route!
+  (is (thrown-with-msg? js/Error #"Assert failed:" (c/set-route! nil :about)))
+  (is (thrown-with-msg? js/Error #"Assert failed:" (c/set-route! 3 :about)))
+  (is (thrown-with-msg? js/Error #"Assert failed:" (c/set-route! "foo" :about)))
+  (is (thrown-with-msg? js/Error #"Assert failed:" (c/set-route! "foo" :about {:queue? true})))
   (let [prev-route (c/current-route *app*)]
-    (c/update-route! *app* :about {:queue? false})
+    (c/set-route! *app* :about {:queue? false})
     (is (not= prev-route (c/current-route *app*)))
     (is (= (c/current-route *app*) '[:about _]))))
 
@@ -221,11 +221,11 @@
     (om/transact! r '[(fire/missiles! {:how-many 3})])
     (is (= (-> r :state deref :queued-sends)
            {:remote '[(fire/missiles! {:how-many 3})]}))
-    (c/update-route! app :about)
+    (c/set-route! app :about)
     (is (= (om/gather-sends (om/to-env r)
              (om/get-query (c/app-root app)) [:remote])
            {:remote [{:about (om/get-query About)}]}))
-    (c/update-route! app :other)
+    (c/set-route! app :other)
     (is (= (om/gather-sends (om/to-env r)
              (om/get-query (c/app-root app)) [:remote])
            {:remote [{:other [:changed/key :updated/ast]}]}))))

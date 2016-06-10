@@ -46,7 +46,7 @@
 
 (defn- change-route [c route e]
   (.preventDefault e)
-  (c/update-route! c route))
+  (c/set-route! c route))
 
 (defn wrapper [{:keys [owner factory props]}]
   (let [route (c/current-route owner)]

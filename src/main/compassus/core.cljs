@@ -78,16 +78,13 @@
         st @(om/app-state reconciler)]
     (get st ::route)))
 
-;; TODO:
-;; - `set-route!` or `update-route!`?
-;; - explore if calling `transact!` on the reconciler doesn't already perform follow-on reads
-(defn update-route!
+(defn set-route!
   "Given a reconciler, Compassus application or component, update the application's
    route. `next-route` may be a keyword or an ident. Takes an optional third
    options argument. Supported options are `queue?`, a boolean denoting if the
    application root should be queued for re-render. Defaults to true."
   ([x next-route]
-   (update-route! x next-route {:queue? true}))
+   (set-route! x next-route {:queue? true}))
   ([x next-route {:keys [queue?]}]
    {:pre [(or (om/reconciler? x) (application? x) (om/component? x))
           (or (vector? next-route) (keyword? next-route))]}
@@ -96,7 +93,7 @@
                       (om/component? x) om/get-reconciler)
          next-route (cond-> next-route
                       (keyword? next-route) (vector '_))]
-     (om/transact! reconciler (cond-> `[(update-route! {:route ~next-route})]
+     (om/transact! reconciler (cond-> `[(set-route! {:route ~next-route})]
                                 queue?
                                 (into (om/transform-reads reconciler [::route-data])))))))
 
@@ -178,7 +175,7 @@
   (let [tx [(om/ast->query ast)]]
     {:remote (not (empty? (user-parser env tx target)))}))
 
-(defmethod mutate [:default 'compassus.core/update-route!]
+(defmethod mutate [:default 'compassus.core/set-route!]
   [{:keys [state] :as env} key params user-parser]
   (let [{:keys [route]} params]
     {:value {:keys [::route ::route-data]}
