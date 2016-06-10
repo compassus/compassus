@@ -15,16 +15,23 @@
   (-> app :config :root-class))
 
 (defn- make-root-class
-  [{:keys [routes wrapper]}]
+  [{:keys [routes wrapper history]}]
   (let [route->query   (zipmap (keys routes)
                                (map om/get-query (vals routes)))
         route->factory (zipmap (keys routes)
-                               (map om/factory (vals routes)))]
+                               (map om/factory (vals routes)))
+        {:keys [setup teardown]} history]
     (ui
       static om/IQuery
       (query [this]
         [::route {::route-data route->query}])
       Object
+      (componentDidMount [this]
+        (when setup
+          (setup)))
+      (componentWillUnmount [this]
+        (when teardown
+          (teardown)))
       (render [this]
         (let [props (om/props this)
               route (::route props)

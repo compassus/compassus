@@ -291,10 +291,3 @@
     (c/mount! app nil)
     (is (= (dissoc @(-> r :config :state) ::om/tables ::c/route)
            idents-state))))
-
-
-;; TODOs:
-;; - history
-;; - secretary example
-;; - bidi example
-;; - (silk example)
