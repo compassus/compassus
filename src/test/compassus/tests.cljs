@@ -172,6 +172,13 @@
       {:value st}
       {:remote true})))
 
+(defmethod local-parser-read :other
+  [{:keys [state query target ast] :as env} _ _]
+  (let [st @state]
+    (if (some st query)
+      {:value st}
+      {:remote (assoc ast :query [:changed/key :updated/ast])})))
+
 (defmulti local-parser-mutate om/dispatch)
 (defmethod local-parser-mutate 'fire/missiles!
   [{:keys [target]} _ _]
@@ -184,12 +191,18 @@
 
 (defmulti remote-parser-mutate om/dispatch)
 
+(defui Other
+  static om/IQuery
+  (query [this]
+    [:other/key :foo :bar]))
+
 (deftest test-remote-integration
   (let [remote-parser (om/parser {:read   remote-parser-read
                                   :mutate remote-parser-mutate})
         app (c/application
               {:routes {:index (c/index-route Home)
-                        :about About}
+                        :about About
+                        :other Other}
                :reconciler-opts
                {:state  (atom {})
                 :parser (om/parser {:read   local-parser-read
@@ -211,7 +224,11 @@
     (c/update-route! app :about)
     (is (= (om/gather-sends (om/to-env r)
              (om/get-query (c/app-root app)) [:remote])
-           {:remote [{:about (om/get-query About)}]}))))
+           {:remote [{:about (om/get-query About)}]}))
+    (c/update-route! app :other)
+    (is (= (om/gather-sends (om/to-env r)
+             (om/get-query (c/app-root app)) [:remote])
+           {:remote [{:other [:changed/key :updated/ast]}]}))))
 
 (deftest test-override-merge
   (let [remote-parser (om/parser {:read   remote-parser-read
