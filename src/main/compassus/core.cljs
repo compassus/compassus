@@ -36,10 +36,7 @@
                       :props   route-data})
             (factory route-data)))))))
 
-(defprotocol ICompassus
-  (-mount! [this target]))
-
-(defrecord CompassusApplication [config state])
+(defrecord ^:private CompassusApplication [config state])
 
 (defn application?
   "Returns true if x is a Compassus application"
@@ -95,12 +92,12 @@
             (map? query) (get route))}])
 
 (defn dispatch
-  "Helper function for implementing the read and mutate multimethods.
+  "Helper function for implementing Compassus internal read and mutate multimethods.
    Dispatches on the remote target and the parser dispatch key."
   [{:keys [target]} key _]
   [target key])
 
-(defmulti read dispatch)
+(defmulti ^:private read dispatch)
 
 (defmethod read :default
   [{:keys [target] :as env} key params]
@@ -139,7 +136,7 @@
     (when-not (empty? ret)
       {:remote (parser/expr->ast (first ret))})))
 
-(defmulti mutate dispatch)
+(defmulti ^:private mutate dispatch)
 
 (defmethod mutate :default
   [{:keys [target] :as env} key params]
