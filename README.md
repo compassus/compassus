@@ -11,6 +11,8 @@ A routing library for Om Next.
     - [Utility functions](#utility-functions)
   - [Changing routes](#changing-routes)
   - [Integrating with browser history](#integrating-with-browser-history)
+    - [Bidi + Pushy example](#bidi--pushy-example)
+    - [Secretary + `goog.History` example](#secretary--googhistory-example)
 - [Documentation](#documentation)
 - [Copyright & License](#copyright--license)
 
@@ -67,7 +69,7 @@ To specify the initial route of the application, wrap its component class in a `
    :about About})
 ```
 
-Routes can be keywords. But they can also be idents. Below is an example route definition that uses an ident as the route key.
+Routes can also be idents. Below is an example route definition that uses an ident as the route key.
 
 ``` clojure
 (defui Item
@@ -165,10 +167,9 @@ URL (or path) navigation is an orthogonal concern to routing in Om Next componen
 
 - `:teardown` - optional. a function of no arguments that will be called when the application unmounts from the DOM.
 
-Below are examples using Bidi + Pushy, and Secretary + `goog.History`.
+Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and [Pushy](https://github.com/kibu-australia/pushy), and another using [Secretary](https://github.com/gf3/secretary) and [`goog.History`](http://google.github.io/closure-library/api/class_goog_History.html).
 
-
-#### [Bidi](https://github.com/juxt/bidi) + [Pushy](https://github.com/kibu-australia/pushy) example
+#### Bidi + Pushy example
 
 ``` clojure
 (ns my-ns
@@ -195,7 +196,7 @@ Below are examples using Bidi + Pushy, and Secretary + `goog.History`.
                :teardown #(pushy/stop! history)}})
 ```
 
-#### [Secretary](https://github.com/gf3/secretary) + `goog.History` example
+#### Secretary + `goog.History` example
 
 ``` clojure
 (ns my-ns
