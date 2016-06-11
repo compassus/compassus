@@ -8,6 +8,7 @@ A routing library for Om Next.
 - [Guide](#guide)
   - [Declaring routes](#declaring-routes)
   - [Assembling a Compassus application](#assembling-a-compassus-application)
+    - [Implementing the parser](#implementing-the-parser)
     - [Utility functions](#utility-functions)
   - [Changing routes](#changing-routes)
   - [Integrating with browser history](#integrating-with-browser-history)
@@ -97,6 +98,26 @@ Creating a Compassus application is done by calling the `application` function. 
 
 The configuration map you pass to `compassus.core/application` can also contain an optional `:wrapper` key. This should either be an Om Next component factory or a function that will receive a map with `owner`, `factory` and `props` as argument. It becomes useful to specify a wrapper whenever you want to define common presentation logic for all the routes in an application.
 
+#### Implementing the parser
+
+The parser is a required parameter to an Om Next reconciler. As such, a Compassus application also needs to have one. However, most of the plumbing is done for you. The parser in a Compassus application will dispatch on the current route. Therefore, all that is required of a parser implementation is that it knows how to handle the routes that your application will transition to. An example is shown below with routes we have previously declared.
+
+``` clojure
+;; we declared routes for `:index` and `:about`. There should exist parser
+;; implementations for them:
+
+(defmulti read om/dispatch)
+
+(defmethod read :index
+  [env k params]
+  {:value ...
+   :remote ...})
+
+(defmethod read :about
+  [env k params]
+  {:value ...
+   :remote ...})
+```
 
 #### Utility functions
 
