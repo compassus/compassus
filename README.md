@@ -253,9 +253,9 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and [Push
 
 ## Documentation
 
-There's documentation [here](). link to codox
+There's API documentation [here](https://anmonteiro.com/compassus/doc/).
 
-There are also devcards examples [here](). link to built devcards examples
+There are also some devcards examples [here](https://anmonteiro.com/compassus/devcards/). Refer to their [source](./src/devcards/compassus/devcards/core.cljs) for more information.
 
 ## Copyright & License
 
