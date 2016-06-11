@@ -78,4 +78,4 @@
   (comp
     (doc)
     (release-devcards)
-    (target :dir #{"dist"})))
+    (target)))
