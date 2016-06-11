@@ -22,7 +22,7 @@ boot release-gh-pages
 mkdir -p $DIR
 git clone -b $GIT_DEPLOY_BRANCH --single-branch $GIT_REPO_REMOTE_URL $DIR
 
-rsync -av --exclude='/js/devcards.out/' --exclude='/js/devcards.cljs.edn' target/ $DIR
+rsync -av --exclude='/devcards/js/devcards.out/' --exclude='/devcards/js/devcards.cljs.edn' target/ $DIR
 
 git $GIT_SUBTREE_OPTS add -A .
 git $GIT_SUBTREE_OPTS commit -am "update to ${GIT_REPO_HEAD_SHA}"
