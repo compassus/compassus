@@ -122,6 +122,7 @@
   [{:keys [state]} key _]
   {:value (get @state key)})
 
+;; TODO: maybe include the current route in the `env` we pass to the user parser
 (defmethod read [nil ::route-data]
   [{:keys [state user-parser] :as env} key params]
   (let [st @state
