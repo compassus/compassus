@@ -47,7 +47,7 @@ To get started, require Compassus somewhere in your project.
 
 ### Declaring routes
 
-Your application's routes are represented by a map in which the keys are keywords (identifying the route handlers of your application) and the values are the respective Om Next component classes. The following example shows the routes for a simple application that has 2 routes, `:index` and `:about`:
+Your application's routes are represented by a map of keywords (the route handlers of your application) to the respective Om Next component classes. The following example shows the routes for a simple application that has 2 routes, `:index` and `:about`:
 
 ```clojure
 (defui Index
@@ -85,7 +85,7 @@ Routes can also be idents. Below is an example route definition that uses an ide
 
 ### Assembling a Compassus application
 
-Creating a Compassus application is done by calling the `application` function. This function accepts a configuration map that should contain your routes and the options to pass to the Om Next reconciler. Compassus will instantiate the reconciler for you. Here's an example:
+Creating a Compassus application is done by calling the `application` function. This function accepts a configuration map that should contain your routes and the options to pass to the Om Next reconciler. Compassus will create the reconciler for you. Here's an example:
 
 ``` clojure
 (def app
@@ -96,15 +96,33 @@ Creating a Compassus application is done by calling the `application` function. 
                        :parser (om/parser {:read read))
 ```
 
-The configuration map you pass to `compassus.core/application` can also contain an optional `:wrapper` key. This should either be an Om Next component factory or a function that will receive a map with `owner`, `factory` and `props` as argument. It becomes useful to specify a wrapper whenever you want to define common presentation logic for all the routes in an application.
+The configuration map you pass to `compassus.core/application` can also contain an optional `:wrapper` key. This should either be an Om Next component factory or a function that will receive a map with `owner`, `factory` and `props` as argument. It becomes useful to specify a wrapper whenever you want to define common presentation logic for all the routes in an application. Example:
+
+``` clojure
+(defui Wrapper
+  Object
+  (render [this]
+    (let [{:keys [owner factory props]}]
+      ;; implement common presentation logic for all routes
+      ;; call the given factory with props in the end
+      (factory props))))
+
+(def wrapper (om/factory Wrapper))
+
+(def app
+  (compassus/application
+    {:routes ...
+     :reconciler-opts ...
+     :wrapper wrapper}))
+```
 
 #### Implementing the parser
 
-The parser is a required parameter to an Om Next reconciler. As such, a Compassus application also needs to have one. However, most of the plumbing is done for you. The parser in a Compassus application will dispatch on the current route. Therefore, all that is required of a parser implementation is that it knows how to handle the routes that your application will transition to. An example is shown below with routes we have previously declared.
+The parser is a required parameter to an Om Next reconciler. As such, a Compassus application also needs to have one, the advantage being that most of the plumbing has been done for you. The parser in a Compassus application will dispatch on the current route. Therefore, all that is required of a parser implementation is that it knows how to handle the routes that your application will transition to. An example is shown below with routes we have previously declared.
 
 ``` clojure
-;; we declared routes for `:index` and `:about`. There should exist parser
-;; implementations for them:
+;; we declared routes for `:index` and `:about`.
+;; our parser should dispatch on those keys:
 
 (defmulti read om/dispatch)
 
