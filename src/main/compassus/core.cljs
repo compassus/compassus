@@ -257,6 +257,11 @@
                         :factory - the component factory for the current route
 
                         :props   - the props for the current route.
+
+     :history         - a map with keys `:setup` and `:teardown`. Values should
+                        be functions of no arguments that will be called when the
+                        application mounts and unmounts, respectively. Used to
+                        set up / teardown browser history listeners.
    "
   [{:keys [routes wrapper reconciler-opts] :as opts}]
   (let [index-route (find-index-route routes)
