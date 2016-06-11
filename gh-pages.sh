@@ -1,47 +1,34 @@
 #!/bin/bash
-
+set -e
 set -o xtrace
-#set +o verbose
 
-# Build the sources
+DIR=dist
+MASTER_DIR=checkout
+
+GIT_REPO_HEAD_SHA=$(git rev-parse --short HEAD)
+GIT_REPO_REMOTE_URL=$(git config --get remote.origin.url)
+GIT_MASTER_BRANCH=master
+GIT_DEPLOY_BRANCH=gh-pages
+GIT_SUBTREE_OPTS="--git-dir=$DIR/.git --work-tree=$DIR"
+
+
+rm -rf $DIR
+
+git clone -b $GIT_MASTER_BRANCH --single-branch $GIT_REPO_REMOTE_URL $MASTER_DIR
+pushd $MASTER_DIR
 
 boot release-gh-pages
 
-# Create temporary directory
+mkdir -p $DIR
+git clone -b $GIT_DEPLOY_BRANCH --single-branch $GIT_REPO_REMOTE_URL $DIR
 
-tmpdir=$(mktemp -d)
+rsync -av --exclude='/js/devcards.out/' --exclude='/js/devcards.cljs.edn' target/ $DIR
 
-# Delete unnecessary files
+git $GIT_SUBTREE_OPTS add -A .
+git $GIT_SUBTREE_OPTS commit -am "update to ${GIT_REPO_HEAD_SHA}"
+git $GIT_SUBTREE_OPTS push origin $GIT_DEPLOY_BRANCH
 
-rm -rf dist/js/devcards.out dist/js/devcards.cljs.edn
+popd
 
-# Copy the latest build to it
-
-cp -R dist/doc dist/js dist/*.html "$tmpdir"
-
-# Switch to the gh-pages branch
-git checkout gh-pages
-
-# Remove the old sources
-git rm -rf doc js *.html
-
-# Copy the build into it
-cp -R "$tmpdir"/* .
-rm -rf "$tmpdir"
-
-# Determine the latest commit in master
-commit=$(git log -n1 --format="%H" master)
-
-# Create a new commit from the new sources
-git add doc js *.html
-git commit -a -m "Update to $commit"
-
-# Push gh-pages to GitHub
-git push origin gh-pages:gh-pages
-
-# Switch back to master
-git checkout master
-
-# Delete dist/ folder
-
-rm -rf dist
+# Cleanup
+rm -rf $MASTER_DIR
