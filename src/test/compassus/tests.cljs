@@ -207,6 +207,7 @@
                {:state  (atom {})
                 :parser (om/parser {:read   local-parser-read
                                     :mutate local-parser-mutate})
+                :merge  c/compassus-merge
                 :send   (fn [{:keys [remote]} cb]
                           (cb (remote-parser {} remote)))}})
         r (c/get-reconciler app)]
@@ -285,6 +286,7 @@
                :reconciler-opts
                {:state  {}
                 :parser app-parser
+                :merge c/compassus-merge
                 :send   (fn [{:keys [remote]} cb]
                           (cb (app-parser {} remote)))}})
         r (c/get-reconciler app)]

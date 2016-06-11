@@ -202,12 +202,14 @@
       (map? class) (assoc index-route (:class class)))))
 
 (defn compassus-merge
+  "Helper function to replace `om.next/default-merge`. Unwraps the current route
+   from the remote response and merges that into the state instead."
   [reconciler state res query]
   (let [route (get state ::route)]
     (om/default-merge reconciler state (get res route) query)))
 
 (defn- process-reconciler-opts
-  [{merge* :merge :keys [state parser] :as reconciler-opts} route->component index-route]
+  [{:keys [state parser] :as reconciler-opts} route->component index-route]
   (let [normalize? (not (satisfies? IAtom state))
         merged-query (transduce (map om/get-query)
                        (completing into) [] (vals route->component))
@@ -221,9 +223,7 @@
            {:state state
             :parser (make-parser parser)}
            (when normalize?
-             {:normalize true})
-           (when-not merge*
-             {:merge compassus-merge}))))
+             {:normalize true}))))
 
 (defn application
   "Construct a Compassus application from a configuration map.
