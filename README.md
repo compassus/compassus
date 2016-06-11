@@ -164,6 +164,17 @@ Returns the current application route.
 (compassus/current-route app)
 ```
 
+##### **`compassus-merge`**
+
+By default, Compassus uses Om's `default-merge` function to merge remote responses into the application state. If your server responses are keyed by the current route, use `compassus-merge` as the `:merge` in the reconciler. It will look for the current route in the remote response and merge that into the application state instead.
+
+``` clojure
+(c/application
+  {:routes ...
+   :reconciler-opts {:state ...
+                     :parser ...
+                     :merge compassus/compassus-merge}})
+```
 
 ### Changing routes
 
