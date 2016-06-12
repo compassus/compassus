@@ -276,8 +276,3 @@
        :reconciler       reconciler
        :root-class       (make-root-class opts')}
       (atom {}))))
-
-
-;; TODO:
-;; - docstrings
-;; - codox
