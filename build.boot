@@ -1,3 +1,5 @@
+(def +version+ "0.1.0")
+
 (set-env!
  :source-paths    #{"src/main"}
  :resource-paths  #{"resources"}
@@ -9,8 +11,9 @@
                  [pandeiro/boot-http          "0.7.3"          :scope "test"]
                  [adzerk/boot-cljs            "1.7.228-1"      :scope "test"]
                  [adzerk/boot-cljs-repl       "0.3.0"          :scope "test"]
-                 [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"] 
+                 [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"]
                  [adzerk/boot-reload          "0.4.8"          :scope "test"]
+                 [adzerk/bootlaces            "0.1.13"         :scope "test"]
                  [org.clojure/tools.nrepl     "0.2.12"         :scope "test"]
                  [org.clojure/tools.namespace "0.3.0-alpha3"   :scope "test"]
                  [weasel                      "0.7.0"          :scope "test"]
@@ -20,10 +23,26 @@
  '[adzerk.boot-cljs      :refer [cljs]]
  '[adzerk.boot-cljs-repl :as cr :refer [cljs-repl start-repl]]
  '[adzerk.boot-reload    :refer [reload]]
+ '[adzerk.bootlaces      :refer [bootlaces! push-release]]
  '[clojure.tools.namespace.repl :as repl]
  '[crisptrutski.boot-cljs-test :refer [test-cljs]]
  '[pandeiro.boot-http :refer [serve]]
  '[codox.boot :refer [codox]])
+
+(bootlaces! +version+ :dont-modify-paths? true)
+
+(task-options!
+  pom {:project 'compassus
+       :version +version+})
+
+(deftask build-jar []
+  (set-env! :resource-paths #{"src/main"})
+  (adzerk.bootlaces/build-jar))
+
+(deftask release-clojars! []
+  (comp
+    (build-jar)
+    (push-release)))
 
 (deftask deps [])
 
