@@ -210,7 +210,9 @@
    from the remote response and merges that into the state instead."
   [reconciler state res query]
   (let [route (get state ::route)]
-    (om/default-merge reconciler state (get res route) query)))
+    (om/default-merge reconciler state
+      (cond-> res
+        (not (symbol? (ffirst res))) (get route)) query)))
 
 (defn- process-reconciler-opts
   [{:keys [state parser] :as reconciler-opts} route->component index-route]
