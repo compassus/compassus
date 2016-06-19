@@ -102,7 +102,7 @@ The configuration map you pass to `compassus.core/application` can also contain 
 (defui Wrapper
   Object
   (render [this]
-    (let [{:keys [owner factory props]}]
+    (let [{:keys [owner factory props]} (om/props this)]
       ;; implement common presentation logic for all routes
       ;; call the given factory with props in the end
       (factory props))))
