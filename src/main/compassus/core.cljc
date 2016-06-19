@@ -177,7 +177,7 @@
     {:remote (not (empty? (user-parser env tx target)))}))
 
 (defmethod mutate [:default 'compassus.core/set-route!]
-  [{:keys [state] :as env} key params user-parser]
+  [{:keys [state] :as env} key params]
   (let [{:keys [route]} params]
     {:value {:keys [::route ::route-data]}
      :action #(swap! state assoc ::route route)}))
