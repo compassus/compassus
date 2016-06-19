@@ -1,6 +1,8 @@
 (ns compassus.core
-  (:require [goog.object :as gobj]
-            [om.next :as om :refer-macros [ui]]
+  #?(:clj (:refer-clojure :exclude [read]))
+  (:require #?@(:cljs [[goog.object :as gobj]
+                       [om.next :as om :refer-macros [ui]]]
+                :clj  [[cellophane.next :as om :refer [ui]]])
             [om.util :as util]
             [om.next.impl.parser :as parser]))
 
@@ -112,7 +114,8 @@
         submethod (get (methods read) dispatch)]
     (if submethod
       (do
-        (-add-method read dispatch submethod)
+        #?(:clj  (.addMethod ^clojure.lang.MultiFn read dispatch submethod)
+           :cljs (-add-method read dispatch submethod))
         (submethod env key params))
       (throw
         (ex-info (str "Missing multimethod implementation for dispatch value " dispatch)
@@ -156,7 +159,8 @@
                                  [[:default :default] (get methods [:default :default])]))]
     (if submethod
       (do
-        (-add-method mutate dispatch submethod)
+        #?(:clj  (.addMethod ^clojure.lang.MultiFn mutate dispatch submethod)
+           :cljs (-add-method mutate dispatch submethod))
         (submethod env key params))
       (throw
         (ex-info (str "Missing multimethod implementation for dispatch value " dispatch)
@@ -210,7 +214,8 @@
 
 (defn- process-reconciler-opts
   [{:keys [state parser] :as reconciler-opts} route->component index-route]
-  (let [normalize? (not (satisfies? IAtom state))
+  (let [normalize? (not #?(:clj  (instance? clojure.lang.Atom state)
+                           :cljs (satisfies? IAtom state)))
         merged-query (transduce (map om/get-query)
                        (completing into) [] (vals route->component))
         route-info {::route index-route}

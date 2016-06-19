@@ -5,12 +5,14 @@
  :resource-paths  #{"resources"}
  :dependencies '[[org.clojure/clojurescript   "1.9.36"         :scope "provided"]
                  [org.omcljs/om               "1.0.0-alpha36"  :scope "provided"]
+                 [com.ladderlife/cellophane   "0.3.2"          :scope "provided"]
                  [com.cognitect/transit-clj   "0.8.285"        :scope "test"]
                  [devcards                    "0.2.1-7"        :scope "test"]
                  [com.cemerick/piggieback     "0.2.1"          :scope "test"]
                  [pandeiro/boot-http          "0.7.3"          :scope "test"]
                  [adzerk/boot-cljs            "1.7.228-1"      :scope "test"]
                  [adzerk/boot-cljs-repl       "0.3.0"          :scope "test"]
+                 [adzerk/boot-test            "1.1.1"          :scope "test"]
                  [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"]
                  [adzerk/boot-reload          "0.4.8"          :scope "test"]
                  [adzerk/bootlaces            "0.1.13"         :scope "test"]
@@ -23,9 +25,10 @@
  '[adzerk.boot-cljs      :refer [cljs]]
  '[adzerk.boot-cljs-repl :as cr :refer [cljs-repl start-repl]]
  '[adzerk.boot-reload    :refer [reload]]
+ '[adzerk.boot-test :as bt-clj]
  '[adzerk.bootlaces      :refer [bootlaces! push-release]]
  '[clojure.tools.namespace.repl :as repl]
- '[crisptrutski.boot-cljs-test :refer [test-cljs]]
+ '[crisptrutski.boot-cljs-test :as bt-cljs]
  '[pandeiro.boot-http :refer [serve]]
  '[codox.boot :refer [codox]])
 
@@ -60,23 +63,31 @@
           :ids #{"js/devcards"})
     (target :dir #{"target"})))
 
-(ns-unmap 'boot.user 'test)
+(deftask testing []
+  (set-env! :source-paths #(conj % "src/test"))
+  identity)
 
-(deftask test
+(deftask test-clj []
+  (comp
+    (testing)
+    (bt-clj/test)))
+
+(deftask test-cljs
   [e exit?     bool  "Enable flag."]
   (let [exit? (cond-> exit?
                 (nil? exit?) not)]
-    (set-env! :source-paths #(conj % "src/test"))
-    (test-cljs :js-env :node
-               :suite-ns 'compassus.runner
-               :cljs-opts {:parallel-build true}
-               :exit? exit?)))
+    (comp
+      (testing)
+      (bt-cljs/test-cljs :js-env :node
+        :suite-ns 'compassus.runner
+        :cljs-opts {:parallel-build true}
+        :exit? exit?))))
 
 (deftask auto-test []
   (comp
     (watch)
     (speak)
-    (test :exit? false)))
+    (test-cljs :exit? false)))
 
 (deftask doc []
   (comp
