@@ -94,6 +94,7 @@
     (codox :name "Compassus"
       :version +version+
       :description "A routing library for Om Next."
+      :output-path (str "doc/" +version+)
       :source-uri "https://github.com/anmonteiro/compassus/blob/master/{filepath}#L{line}")))
 
 (deftask release-devcards []
