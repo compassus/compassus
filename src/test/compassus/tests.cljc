@@ -57,13 +57,15 @@
   (is (fn? (c/root-class *app*)))
   (is (some? #?(:clj  (-> (c/root-class *app*) meta :component-name)
                 :cljs (.. (c/root-class *app*) -prototype))))
-  #?(:cljs (is (true? (.. (c/root-class *app*) -prototype -om$isComponent)))))
+  #?(:cljs (is (true? (.. (c/root-class *app*) -prototype -om$isComponent)))
+     :clj  (is (string? (-> (c/root-class *app*) meta :component-name)))))
 
 (deftest test-make-root-class
   (let [root (#'c/make-root-class {:routes {:index Home
                                           :about About}})]
     (is (fn? root))
-    #?(:cljs (is (true? (.. root -prototype -om$isComponent))))
+    #?(:cljs (is (true? (.. root -prototype -om$isComponent)))
+       :clj  (is (string? (-> root meta :component-name))))
     (is (= (om/get-query root)
            [::c/route
             {::c/route-data {:index [:home/title :home/content]
