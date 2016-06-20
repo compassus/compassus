@@ -3,8 +3,8 @@
 (set-env!
  :source-paths    #{"src/main"}
  :resource-paths  #{"resources"}
- :dependencies '[[org.clojure/clojurescript   "1.9.36"         :scope "provided"]
-                 [org.omcljs/om               "1.0.0-alpha36"  :scope "provided"]
+ :dependencies '[[org.clojure/clojurescript   "1.9.76"         :scope "provided"]
+                 [org.omcljs/om               "1.0.0-alpha37"  :scope "provided"]
                  [com.ladderlife/cellophane   "0.3.2"          :scope "provided"]
                  [com.cognitect/transit-clj   "0.8.285"        :scope "test"]
                  [devcards                    "0.2.1-7"        :scope "test"]
