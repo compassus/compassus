@@ -324,3 +324,21 @@
     (c/mount! app nil)
     (is (= (dissoc @(-> r :config :state) ::om/tables ::c/route)
            idents-state))))
+
+(defmethod local-parser-read :foo
+  [{:keys [route]} _ _]
+  {:value {:test-route route}})
+
+(deftest test-route-in-user-parser
+  (let [app (c/application
+              {:routes {:index Home
+                        :foo   (c/index-route About)}
+               :reconciler-opts
+               {:state  (atom {})
+                :parser (om/parser {:read   local-parser-read
+                                    :mutate local-parser-mutate})}})
+        r (c/get-reconciler app)
+        p (-> r :config :parser)]
+    (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
+               (get ::c/route-data))
+           {:test-route :foo}))))

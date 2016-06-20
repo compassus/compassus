@@ -5,6 +5,7 @@
 ### New features
 
 - Port Compassus to `.cljc` so that it's usable from [Cellophane](https://github.com/ladderlife/cellophane).
+- Include the current route in the parser's `env`, under the key `:route`.
 
 ### Bug fixes
 

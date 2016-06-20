@@ -137,6 +137,8 @@ The parser is a required parameter to an Om Next reconciler. As such, a Compassu
    :remote ...})
 ```
 
+For convenience, the parser's `env` argument contains a `:route` key with the current route of the Compassus application.
+
 #### Utility functions
 
 There are a few utility functions in `compassus.core`. Below is a description of these functions along with simple examples of their usage.

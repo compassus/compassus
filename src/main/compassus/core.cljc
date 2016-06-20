@@ -125,12 +125,9 @@
   [{:keys [state]} key _]
   {:value (get @state key)})
 
-;; TODO: maybe include the current route in the `env` we pass to the user parser
 (defmethod read [nil ::route-data]
-  [{:keys [state user-parser] :as env} key params]
-  (let [st @state
-        route (get st ::route)
-        query (infer-query env route)
+  [{:keys [route user-parser] :as env} key params]
+  (let [query (infer-query env route)
         ret (user-parser env query)]
     {:value (get ret route)}))
 
@@ -139,10 +136,8 @@
   {:value (get @state key)})
 
 (defmethod read [:default ::route-data]
-  [{:keys [state target ast user-parser] :as env} key params]
-  (let [st @state
-        route (get st ::route)
-        query (infer-query env route)
+  [{:keys [target ast route user-parser] :as env} key params]
+  (let [query (infer-query env route)
         ret (user-parser env query target)]
     (when-not (empty? ret)
       {:remote (parser/expr->ast (first ret))})))
@@ -182,17 +177,16 @@
     {:value {:keys [::route ::route-data]}
      :action #(swap! state assoc ::route route)}))
 
-(defn- generate-parser-read [user-parser]
-  (fn [env key params]
-    (read (assoc env :user-parser user-parser) key params)))
-
-(defn- generate-parser-mutate [user-parser]
-  (fn [env key params]
-    (mutate (assoc env :user-parser user-parser) key params)))
+(defn- generate-parser-fn [f user-parser]
+  (fn [{:keys [state] :as env} key params]
+    (let [route (get @state ::route)
+          env'  (merge env {:user-parser user-parser
+                            :route route})]
+      (f env' key params))))
 
 (defn- make-parser [user-parser]
-  (om/parser {:read   (generate-parser-read user-parser)
-              :mutate (generate-parser-mutate user-parser)}))
+  (om/parser {:read   (generate-parser-fn read user-parser)
+              :mutate (generate-parser-fn mutate user-parser)}))
 
 (defn- find-index-route [routes]
   (reduce (fn [fst [k class]]
