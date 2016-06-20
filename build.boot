@@ -91,11 +91,10 @@
 
 (deftask doc []
   (comp
-    (codox :language :clojurescript
-           :name "Compassus"
-           :version "0.1.0"
-           :description "A routing library for Om Next."
-           :source-uri "https://github.com/anmonteiro/compassus/blob/master/{filepath}#L{line}")))
+    (codox :name "Compassus"
+      :version +version+
+      :description "A routing library for Om Next."
+      :source-uri "https://github.com/anmonteiro/compassus/blob/master/{filepath}#L{line}")))
 
 (deftask release-devcards []
   (set-env! :source-paths #(conj % "src/devcards"))

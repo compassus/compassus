@@ -47,6 +47,9 @@
 
 (defrecord ^:private CompassusApplication [config state])
 
+(alter-meta! #'->CompassusApplication assoc :private true)
+(alter-meta! #'map->CompassusApplication assoc :private true)
+
 (defn application?
   "Returns true if x is a Compassus application"
   [x]
