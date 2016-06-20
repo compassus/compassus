@@ -108,6 +108,6 @@
   (comp
     (doc)
     (release-devcards)
-    (sift :move {#"index.html" "devcards/index.html"
-                 #"js/"  "devcards/js/"})
+    (sift :move {#"^index.html" "devcards/index.html"
+                 #"^js/"  "devcards/js/"})
     (target)))
