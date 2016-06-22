@@ -337,3 +337,27 @@
     (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
                (get ::c/route-data))
            {:test-route :foo}))))
+
+(defn remote-normalization-local-read
+  [{:keys [state query]} k _]
+  (let [st @state]
+    {:remote true}))
+
+(defn remote-normalization-read
+  [_ _ _]
+  {:value posts-init-state})
+
+(deftest test-remote-normalization
+  (let [remote-parser (om/parser {:read remote-normalization-read})
+        app (c/application {:routes {:posts PostList}
+                            :reconciler-opts {:state {}
+                                              :merge c/compassus-merge
+                                              :send (fn [{:keys [remote]} cb]
+                                                      (cb (remote-parser {} remote) remote))
+                                              :parser (om/parser {:read remote-normalization-local-read})}})
+        r (c/get-reconciler app)]
+    (c/mount! app nil)
+    (is (contains? @r :posts/list))
+    (is (contains? @r :post/by-id))
+    (is (= (keys (:post/by-id @r)) [0 1]))
+    (is (= (:posts/list @r) [[:post/by-id 0] [:post/by-id 1]]))))

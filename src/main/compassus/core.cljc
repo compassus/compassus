@@ -206,10 +206,14 @@
   "Helper function to replace `om.next/default-merge`. Unwraps the current route
    from the remote response and merges that into the state instead."
   [reconciler state res query]
-  (let [route (get state ::route)]
+  (let [route (get state ::route)
+        mutation? (symbol? (ffirst res))
+        query' (if-not mutation?
+                 (get (first query) route)
+                 query)]
     (om/default-merge reconciler state
       (cond-> res
-        (not (symbol? (ffirst res))) (get route)) query)))
+        (not mutation?) (get route)) query')))
 
 (defn- process-reconciler-opts
   [{:keys [state parser] :as reconciler-opts} route->component index-route]
