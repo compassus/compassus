@@ -44,15 +44,10 @@
 (deftest test-create-app
   (is (instance? compassus.core.CompassusApplication *app*))
   (is (om/reconciler? (c/get-reconciler *app*)))
-  (is (= (-> (c/get-reconciler *app*)
-           om/app-state
-           deref
+  (is (= (-> @(c/get-reconciler *app*)
            (dissoc ::c/route))
         init-state))
-  (is (contains? (-> (c/get-reconciler *app*)
-                   om/app-state
-                   deref)
-        ::c/route))
+  (is (contains? @(c/get-reconciler *app*) ::c/route))
   (is (some? (c/root-class *app*)))
   (is (fn? (c/root-class *app*)))
   (is (some? #?(:clj  (-> (c/root-class *app*) meta :component-name)
@@ -179,7 +174,7 @@
                                               :parser (om/parser {:read posts-read})}})
         r (c/get-reconciler app)
         p (-> r :config :parser)]
-    (is (not= posts-init-state (dissoc @(om/app-state r) ::c/route)))
+    (is (not= posts-init-state (dissoc @r ::c/route)))
     (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
                (get ::c/route-data))
            posts-init-state))))
@@ -246,12 +241,12 @@
              (om/get-query (c/root-class app)) [:remote])
            {:remote [{:index (om/get-query Home)}]}))
     (c/mount! app nil)
-    (is (= (dissoc @(om/app-state (c/get-reconciler app)) ::c/route) init-state))
+    (is (= (dissoc @(c/get-reconciler app) ::c/route) init-state))
     (is (= (om/gather-sends (#'om/to-env r)
              '[(fire/missiles! {:how-many 42})] [:remote])
            {:remote '[(fire/missiles! {:how-many 42})]}))
     (om/transact! r '[(fire/missiles! {:how-many 3})])
-    (is (= (-> @(om/app-state r) (get 'fire/missiles!) :result)
+    (is (= (-> @r (get 'fire/missiles!) :result)
            {:missiles/fired? 3}))
     (c/set-route! app :about)
     (is (= (om/gather-sends (#'om/to-env r)
@@ -278,7 +273,7 @@
                           (cb (remote-parser {} remote)))}})
         r (c/get-reconciler app)]
     (c/mount! app nil)
-    (is (contains? @(om/app-state (c/get-reconciler app)) :foo))))
+    (is (contains? @(c/get-reconciler app) :foo))))
 
 (def idents-state
   {:item/by-id {0 {:id 0 :name "some item"}}})
