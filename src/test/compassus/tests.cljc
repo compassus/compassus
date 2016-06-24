@@ -185,26 +185,26 @@
   (let [st @state]
     (if (some st query)
       {:value st}
-      {:remote true})))
+      {target true})))
 
 (defmethod local-parser-read :about
   [{:keys [state query target ast] :as env} _ _]
   (let [st @state]
     (if (some st query)
       {:value st}
-      {:remote true})))
+      {target true})))
 
 (defmethod local-parser-read :other
   [{:keys [state query target ast] :as env} _ _]
   (let [st @state]
     (if (some st query)
       {:value st}
-      {:remote (assoc ast :query [:changed/key :updated/ast])})))
+      {target (assoc ast :query [:changed/key :updated/ast])})))
 
 (defmulti local-parser-mutate om/dispatch)
 (defmethod local-parser-mutate 'fire/missiles!
   [{:keys [target]} _ _]
-  {:remote true})
+  {target true})
 
 (defmulti remote-parser-read om/dispatch)
 (defmethod remote-parser-read :index
@@ -233,29 +233,30 @@
                {:state  (atom {})
                 :parser (om/parser {:read   local-parser-read
                                     :mutate local-parser-mutate})
+                :remotes [:some-remote]
                 :merge  c/compassus-merge
-                :send   (fn [{:keys [remote]} cb]
-                          (cb (remote-parser {} remote)))}})
+                :send   (fn [{:keys [some-remote]} cb]
+                          (cb (remote-parser {} some-remote)))}})
         r (c/get-reconciler app)]
     (is (= (om/gather-sends (#'om/to-env r)
-             (om/get-query (c/root-class app)) [:remote])
-           {:remote [{:index (om/get-query Home)}]}))
+             (om/get-query (c/root-class app)) [:some-remote])
+           {:some-remote [{:index (om/get-query Home)}]}))
     (c/mount! app nil)
     (is (= (dissoc @(c/get-reconciler app) ::c/route) init-state))
     (is (= (om/gather-sends (#'om/to-env r)
-             '[(fire/missiles! {:how-many 42})] [:remote])
-           {:remote '[(fire/missiles! {:how-many 42})]}))
+             '[(fire/missiles! {:how-many 42})] [:some-remote])
+           {:some-remote '[(fire/missiles! {:how-many 42})]}))
     (om/transact! r '[(fire/missiles! {:how-many 3})])
     (is (= (-> @r (get 'fire/missiles!) :result)
            {:missiles/fired? 3}))
     (c/set-route! app :about)
     (is (= (om/gather-sends (#'om/to-env r)
-             (om/get-query (c/root-class app)) [:remote])
-           {:remote [{:about (om/get-query About)}]}))
+             (om/get-query (c/root-class app)) [:some-remote])
+           {:some-remote [{:about (om/get-query About)}]}))
     (c/set-route! app :other)
     (is (= (om/gather-sends (#'om/to-env r)
-             (om/get-query (c/root-class app)) [:remote])
-           {:remote [{:other [:changed/key :updated/ast]}]}))))
+             (om/get-query (c/root-class app)) [:some-remote])
+           {:some-remote [{:other [:changed/key :updated/ast]}]}))))
 
 (deftest test-override-merge
   (let [remote-parser (om/parser {:read   remote-parser-read

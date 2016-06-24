@@ -143,7 +143,7 @@
   (let [query (infer-query env route)
         ret (user-parser env query target)]
     (when-not (empty? ret)
-      {:remote (parser/expr->ast (first ret))})))
+      {target (parser/expr->ast (first ret))})))
 
 (defmulti ^:private mutate dispatch)
 
@@ -172,7 +172,7 @@
 (defmethod mutate [:default :default]
   [{:keys [target ast user-parser] :as env} key params]
   (let [tx [(om/ast->query ast)]]
-    {:remote (not (empty? (user-parser env tx target)))}))
+    {target (not (empty? (user-parser env tx target)))}))
 
 (defmethod mutate [:default 'compassus.core/set-route!]
   [{:keys [state] :as env} key params]
