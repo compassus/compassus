@@ -362,3 +362,24 @@
     (is (contains? @r :post/by-id))
     (is (= (keys (:post/by-id @r)) [0 1]))
     (is (= (:posts/list @r) [[:post/by-id 0] [:post/by-id 1]]))))
+
+(defmulti change-remote-mutation-local-mutate om/dispatch)
+
+(defmethod change-remote-mutation-local-mutate 'do/stuff!
+  [{:keys [ast]} _ _]
+  {:remote (assoc-in ast [:params :when] :later)})
+
+(defmethod change-remote-mutation-local-mutate 'other/stuff!
+  [_ _ _]
+  {:action (fn [])})
+
+(deftest test-change-remote-mutation
+  (let  [app (c/application {:routes {:posts PostList}
+                             :reconciler-opts {:state {}
+                                               :parser (om/parser {:mutate change-remote-mutation-local-mutate})}})
+         r (c/get-reconciler app)]
+    (is (= (om/gather-sends (#'om/to-env r)
+             '[(do/stuff! {:when :now})] [:remote])
+           {:remote '[(do/stuff! {:when :later})]}))
+    (is (empty? (om/gather-sends (#'om/to-env r)
+                  '[(other/stuff!)] [:remote])))))

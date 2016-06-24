@@ -171,8 +171,10 @@
 
 (defmethod mutate [:default :default]
   [{:keys [target ast user-parser] :as env} key params]
-  (let [tx [(om/ast->query ast)]]
-    {target (not (empty? (user-parser env tx target)))}))
+  (let [tx [(om/ast->query ast)]
+        [ret] (user-parser env tx target)]
+    {target (cond-> ret
+              (some? ret) parser/expr->ast)}))
 
 (defmethod mutate [:default 'compassus.core/set-route!]
   [{:keys [state] :as env} key params]
