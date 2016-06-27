@@ -2,6 +2,8 @@
 
 ## master (unreleased)
 
+## 0.2.0 (2016-06-27)
+
 ### New features
 
 - Port Compassus to `.cljc` so that it's usable from [Cellophane](https://github.com/ladderlife/cellophane).
