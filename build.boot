@@ -3,7 +3,7 @@
 (set-env!
  :source-paths    #{"src/main"}
  :resource-paths  #{"resources"}
- :dependencies '[[org.clojure/clojurescript   "1.9.76"         :scope "provided"]
+ :dependencies '[[org.clojure/clojurescript   "1.9.89"         :scope "provided"]
                  [org.omcljs/om               "1.0.0-alpha37"  :scope "provided"]
                  [com.ladderlife/cellophane   "0.3.2"          :scope "provided"]
                  [com.cognitect/transit-clj   "0.8.285"        :scope "test"]
@@ -11,7 +11,7 @@
                  [com.cemerick/piggieback     "0.2.1"          :scope "test"]
                  [pandeiro/boot-http          "0.7.3"          :scope "test"]
                  [adzerk/boot-cljs            "1.7.228-1"      :scope "test"]
-                 [adzerk/boot-cljs-repl       "0.3.0"          :scope "test"]
+                 [adzerk/boot-cljs-repl       "0.3.2"          :scope "test"]
                  [adzerk/boot-test            "1.1.1"          :scope "test"]
                  [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"]
                  [adzerk/boot-reload          "0.4.8"          :scope "test"]
@@ -23,7 +23,7 @@
 
 (require
  '[adzerk.boot-cljs      :refer [cljs]]
- '[adzerk.boot-cljs-repl :as cr :refer [cljs-repl start-repl]]
+ '[adzerk.boot-cljs-repl :as cr :refer [cljs-repl-env start-repl]]
  '[adzerk.boot-reload    :refer [reload]]
  '[adzerk.boot-test :as bt-clj]
  '[adzerk.bootlaces      :refer [bootlaces! push-release]]
@@ -54,7 +54,7 @@
   (comp
     (serve)
     (watch)
-    (cljs-repl)
+    (cljs-repl-env)
     (reload)
     (speak)
     (cljs :source-map true
