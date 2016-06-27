@@ -22,7 +22,7 @@ A routing library for Om Next.
 Leiningen dependency information:
 
 ```clojure
-[compassus "0.1.0"]
+[compassus "0.2.0"]
 ```
 
 Maven dependency information:
@@ -31,7 +31,7 @@ Maven dependency information:
 <dependency>
   <groupId>compassus</groupId>
   <artifactId>compassus</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
