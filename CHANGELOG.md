@@ -4,7 +4,8 @@
 
 ### Bug fixes
 
-- Local mutations return the correct result and `:value`s, instead of nested results that are a consequence of calling the user parser inside Compassus's parser.
+- Return the correct result and `:value`s in local mutations, instead of nested results that are a consequence of calling the user parser inside Compassus's parser.
+- Make re-reading keys after `om.next/transact!` calls work properly (was missing a multimethod implementation).
 
 ## 0.2.0 (2016-06-27)
 

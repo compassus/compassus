@@ -412,3 +412,57 @@
             :some/action 1}))
     (is (contains? (get mut-err 'some/error!) :om.next/error))
     (is (not (contains? (get mut-err 'some/error!) :result)))))
+
+(defui Menu
+  static om/IQuery
+  (query [this]
+    [:foo :bar]))
+
+(defui Index
+  static om/IQuery
+  (query [this]
+    [{:app/menu (om/get-query Menu)} :app/title]))
+
+(defmulti transact-read om/dispatch)
+
+(defmethod transact-read :index
+  [{:keys [state]} _ _]
+  {:value @state})
+
+(defmethod transact-read :default
+  [{:keys [state]} k _]
+  {:value (get @state k)})
+
+(defmethod transact-read :remote/key
+  [_ _ _]
+  {:remote true})
+
+(deftest test-transact-re-reads
+  (let [app (c/application
+              {:routes {:index Index}
+               :reconciler-opts
+               {:state  (atom {:app/title "Some App"
+                               :app/menu {:foo "foo"
+                                          :bar "bar"}})
+                :parser (om/parser {:read   transact-read
+                                    :mutate app-mutate})}})
+        r (c/get-reconciler app)
+        p (-> r :config :parser)
+        reread-ret1 (p (#'om/to-env r) '[(some/action!) :app/menu])
+        reread-ret2 (p (#'om/to-env r) '[(some/action!) :app/menu :app/title])
+        reread-ret3 (p (#'om/to-env r) `[(some/action!) {:app/menu ~(om/get-query Menu)}])]
+    (is (contains? reread-ret1 'some/action!))
+    (is (contains? reread-ret1 :app/menu))
+    (is (= (:app/menu reread-ret1)
+          {:foo "foo"
+           :bar "bar"}))
+    (is (contains? reread-ret2 'some/action!))
+    (is (contains? reread-ret2 :app/menu))
+    (is (contains? reread-ret2 :app/title))
+    (is (= (:app/title reread-ret2) "Some App"))
+    (is (= (om/gather-sends (#'om/to-env r)
+             `[(some/action!) :remote/key] [:remote])
+           {:remote [:remote/key]}))
+    (is (= (om/gather-sends (#'om/to-env r)
+             `[(some/action!) {:remote/key [:foo :bar]}] [:remote])
+           {:remote [{:remote/key [:foo :bar]}]}))))

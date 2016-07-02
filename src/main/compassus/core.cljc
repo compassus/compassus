@@ -103,6 +103,23 @@
   [{route (cond-> query
             (map? query) (get route))}])
 
+(defn- default-method-impl
+  [multi-fn {:keys [target] :as env} key params]
+  (let [methods              (methods multi-fn)
+        [dispatch submethod] (if-let [method (get methods [:default key])]
+                               [[:default key] method]
+                               (if (nil? target)
+                                 [[target :default] (get methods [target :default])]
+                                 [[:default :default] (get methods [:default :default])]))]
+    (if submethod
+      (do
+        #?(:clj  (.addMethod ^clojure.lang.MultiFn multi-fn dispatch submethod)
+           :cljs (-add-method multi-fn dispatch submethod))
+        (submethod env key params))
+      (throw
+        (ex-info (str "Missing multimethod implementation for dispatch value " dispatch)
+          {:type :error/missing-method-implementation})))))
+
 (defn dispatch
   "Helper function for implementing Compassus internal read and mutate multimethods.
    Dispatches on the remote target and the parser dispatch key."
@@ -112,19 +129,10 @@
 (defmulti ^:private read dispatch)
 
 (defmethod read :default
-  [{:keys [target] :as env} key params]
-  (let [dispatch  [:default key]
-        submethod (get (methods read) dispatch)]
-    (if submethod
-      (do
-        #?(:clj  (.addMethod ^clojure.lang.MultiFn read dispatch submethod)
-           :cljs (-add-method read dispatch submethod))
-        (submethod env key params))
-      (throw
-        (ex-info (str "Missing multimethod implementation for dispatch value " dispatch)
-          {:type :error/missing-method-implementation})))))
+  [env key params]
+  (default-method-impl read env key params))
 
-(defmethod read [nil ::route]
+(defmethod read [:default ::route]
   [{:keys [state]} key _]
   {:value (get @state key)})
 
@@ -134,10 +142,6 @@
         ret (user-parser env query)]
     {:value (get ret route)}))
 
-(defmethod read [:default ::route]
-  [{:keys [state]} key _]
-  {:value (get @state key)})
-
 (defmethod read [:default ::route-data]
   [{:keys [target ast route user-parser] :as env} key params]
   (let [query (infer-query env route)
@@ -145,24 +149,24 @@
     (when-not (empty? ret)
       {target (parser/expr->ast (first ret))})))
 
+(defmethod read [nil :default]
+  [{:keys [ast user-parser] :as env} key params]
+  (let [query [(parser/ast->expr ast)]
+        ret (user-parser env query)]
+    {:value (get ret key)}))
+
+(defmethod read [:default :default]
+  [{:keys [target ast route user-parser] :as env} key params]
+  (let [query [(parser/ast->expr ast)]
+        ret (user-parser env query target)]
+    (when-not (empty? ret)
+      {target (parser/expr->ast (first ret))})))
+
 (defmulti ^:private mutate dispatch)
 
 (defmethod mutate :default
-  [{:keys [target] :as env} key params]
-  (let [methods              (methods mutate)
-        [dispatch submethod] (if-let [method (get methods [:default key])]
-                               [[:default key] method]
-                               (if (nil? target)
-                                 [[target :default] (get methods [target :default])]
-                                 [[:default :default] (get methods [:default :default])]))]
-    (if submethod
-      (do
-        #?(:clj  (.addMethod ^clojure.lang.MultiFn mutate dispatch submethod)
-           :cljs (-add-method mutate dispatch submethod))
-        (submethod env key params))
-      (throw
-        (ex-info (str "Missing multimethod implementation for dispatch value " dispatch)
-          {:type :error/missing-method-implementation})))))
+  [env key params]
+  (default-method-impl mutate env key params))
 
 (defmethod mutate [nil :default]
   [{:keys [ast user-parser] :as env} key _]
