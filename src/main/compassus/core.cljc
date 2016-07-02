@@ -165,9 +165,11 @@
           {:type :error/missing-method-implementation})))))
 
 (defmethod mutate [nil :default]
-  [{:keys [ast user-parser] :as env} _ _]
-  (let [tx [(om/ast->query ast)]]
-    {:action #(user-parser env tx)}))
+  [{:keys [ast user-parser] :as env} key _]
+  (let [tx [(om/ast->query ast)]
+        {:keys [result om.next/error] :as ret} (get (user-parser env tx) key)]
+    {:value (dissoc ret :result ::om/error)
+     :action #(or result (throw error))}))
 
 (defmethod mutate [:default :default]
   [{:keys [target ast user-parser] :as env} key params]

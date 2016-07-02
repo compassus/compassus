@@ -28,13 +28,16 @@
   [{:keys [state query]} k _]
   {:value (select-keys @state query)})
 
+(defmulti app-mutate om/dispatch)
+
 (defn wrap-app [test-fn]
   (binding [*app* (c/application
                     {:routes {:index (c/index-route Home)
                               :about About}
                      :reconciler-opts
                      {:state (atom init-state)
-                      :parser (om/parser {:read app-read})}})]
+                      :parser (om/parser {:read app-read
+                                          :mutate app-mutate})}})]
     ;; make setTimeout execute synchronously
     #?(:cljs (set! js/setTimeout (fn [f t] (f))))
     (test-fn)))
@@ -57,7 +60,7 @@
 
 (deftest test-make-root-class
   (let [root (#'c/make-root-class {:routes {:index Home
-                                          :about About}})]
+                                            :about About}})]
     (is (fn? root))
     #?(:cljs (is (true? (.. root -prototype -om$isComponent)))
        :clj  (is (string? (-> root meta :component-name))))
@@ -383,3 +386,29 @@
            {:remote '[(do/stuff! {:when :later})]}))
     (is (empty? (om/gather-sends (#'om/to-env r)
                   '[(other/stuff!)] [:remote])))))
+
+(defmethod app-mutate 'some/action!
+   [{:keys [state]} _ _]
+   {:value {:some-value 42}
+    :action #(swap! state update-in [:some/action]  (fnil inc 0))})
+
+(defmethod app-mutate 'some/error!
+   [{:keys [state]} _ _]
+  {:action #(throw #?(:clj  (Exception. "'some/action error")
+                      :cljs (js.Error. "'some/action error")))})
+
+(deftest test-local-mutation
+  (c/mount! *app* nil)
+  (let [r (c/get-reconciler *app*)
+        p (-> r :config :parser)
+        mut-ret (p (#'om/to-env r) '[(some/action!)])
+        mut-err (p (#'om/to-env r) '[(some/error!)])]
+    (is (contains? (get mut-ret 'some/action!) :some-value))
+    (is (contains? (get mut-ret 'some/action!) :result))
+    (is (= (get-in mut-ret ['some/action! :result])
+           {:home/title "Home page"
+            :home/content "Lorem ipsum dolor sit amet."
+            ::c/route :index
+            :some/action 1}))
+    (is (contains? (get mut-err 'some/error!) :om.next/error))
+    (is (not (contains? (get mut-err 'some/error!) :result)))))
