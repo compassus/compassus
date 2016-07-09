@@ -308,7 +308,7 @@
     (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
                (get ::c/route-data))
            {:id 0
-           :name "some item"})))
+            :name "some item"})))
   (let [app-parser (om/parser {:read ident-parser-read})
         app (c/application
               {:routes {:index Home
@@ -388,12 +388,12 @@
                   '[(other/stuff!)] [:remote])))))
 
 (defmethod app-mutate 'some/action!
-   [{:keys [state]} _ _]
-   {:value {:some-value 42}
-    :action #(swap! state update-in [:some/action]  (fnil inc 0))})
+  [{:keys [state]} _ _]
+  {:value {:some-value 42}
+   :action #(swap! state update-in [:some/action]  (fnil inc 0))})
 
 (defmethod app-mutate 'some/error!
-   [{:keys [state]} _ _]
+  [{:keys [state]} _ _]
   {:action #(throw #?(:clj  (Exception. "'some/action error")
                       :cljs (js.Error. "'some/action error")))})
 
