@@ -6,6 +6,7 @@
 
 - Return the correct result and `:value`s in local mutations, instead of nested results that are a consequence of calling the user parser inside Compassus's parser.
 - Make re-reading keys after `om.next/transact!` calls work properly (was missing a multimethod implementation).
+- Make sure `::compassus/route` remains in the app state after a tempid migration
 
 ## 0.2.0 (2016-06-27)
 

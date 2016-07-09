@@ -466,3 +466,64 @@
     (is (= (om/gather-sends (#'om/to-env r)
              `[(some/action!) {:remote/key [:foo :bar]}] [:remote])
            {:remote [{:remote/key [:foo :bar]}]}))))
+
+(defui Person
+  static om/Ident
+  (ident [this {:keys [db/id]}]
+    [:person/by-id id])
+  static om/IQuery
+  (query [this]
+    [:db/id :person/name]))
+
+(defui People
+  static om/IQuery
+  (query [this]
+    [{:people (om/get-query Person)}]))
+
+(deftest test-remote-migrate
+  (testing "default-migrate"
+    (let [tmpid #?(:clj  (om/tempid (java.util.UUID/randomUUID))
+                   :cljs (om/tempid))
+          app (c/application
+                {:routes {:index People}
+                 :reconciler-opts
+                 {:state (atom {:people [[:person/by-id tmpid]]
+                                :person/by-id {tmpid {:db/id tmpid
+                                                      :person/name "Joe"}}})
+                  :normalize true
+                  :id-key :db/id
+                  :parser (om/parser {:read transact-read})}})
+          r (c/get-reconciler app)]
+      (c/mount! app nil)
+      (is (om/tempid? (-> @r :person/by-id ffirst)))
+      (om/merge! r
+        {'some/action! {:tempids {[:person/by-id tmpid] [:person/by-id 42]}}}
+        (om/get-query People))
+      (is (not (om/tempid? (-> @r :person/by-id ffirst))))
+      (is (= (-> @r :person/by-id ffirst) 42))
+      (is (contains? @r ::c/route))))
+  (testing "custom migrate"
+    (let [tmpid #?(:clj  (om/tempid (java.util.UUID/randomUUID))
+                   :cljs (om/tempid))
+          app (c/application
+                {:routes {:index People}
+                 :reconciler-opts
+                 {:state (atom {:people [[:person/by-id tmpid]]
+                                :person/by-id {tmpid {:db/id tmpid
+                                                      :person/name "Joe"}}})
+                  :migrate (fn [app-state-pure query tempids id-key]
+                             (assoc (#'om/default-migrate app-state-pure query tempids id-key)
+                               :random/key 42))
+                  :normalize true
+                  :id-key :db/id
+                  :parser (om/parser {:read transact-read})}})
+          r (c/get-reconciler app)]
+      (c/mount! app nil)
+      (is (om/tempid? (-> @r :person/by-id ffirst)))
+      (om/merge! r
+        {'some/action! {:tempids {[:person/by-id tmpid] [:person/by-id 42]}}}
+        (om/get-query People))
+      (is (not (om/tempid? (-> @r :person/by-id ffirst))))
+      (is (= (-> @r :person/by-id ffirst) 42))
+      (is (contains? @r ::c/route))
+      (is (contains? @r :random/key)))))

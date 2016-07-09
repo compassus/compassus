@@ -223,8 +223,18 @@
       (cond-> res
         (not mutation?) (get route)) query')))
 
+(defn- make-migrate-fn [migrate]
+  (fn migrate-fn
+    ([app-state-pure query tempids]
+     (migrate-fn app-state-pure query tempids nil))
+    ([app-state-pure query tempids id-key]
+     (merge (select-keys app-state-pure [::route])
+       (migrate app-state-pure query tempids id-key)))))
+
 (defn- process-reconciler-opts
-  [{:keys [state parser] :as reconciler-opts} route->component index-route]
+  [{:keys [state parser migrate]
+    :or {migrate #'om/default-migrate}
+    :as reconciler-opts} route->component index-route]
   (let [normalize? (not #?(:clj  (instance? clojure.lang.Atom state)
                            :cljs (satisfies? IAtom state)))
         merged-query (transduce (map om/get-query)
@@ -237,7 +247,8 @@
                   (swap! merge route-info)))]
     (merge reconciler-opts
            {:state state
-            :parser (make-parser parser)}
+            :parser (make-parser parser)
+            :migrate (make-migrate-fn migrate)}
            (when normalize?
              {:normalize true}))))
 
