@@ -3,18 +3,18 @@
 (set-env!
  :source-paths    #{"src/main"}
  :resource-paths  #{"resources"}
- :dependencies '[[org.clojure/clojurescript   "1.9.89"         :scope "provided"]
-                 [org.omcljs/om               "1.0.0-alpha37"  :scope "provided"]
-                 [com.ladderlife/cellophane   "0.3.2"          :scope "provided"]
+ :dependencies '[[org.clojure/clojurescript   "1.9.93"         :scope "provided"]
+                 [org.omcljs/om               "1.0.0-alpha38"  :scope "provided"]
+                 [com.ladderlife/cellophane   "0.3.3"          :scope "provided"]
                  [com.cognitect/transit-clj   "0.8.285"        :scope "test"]
                  [devcards                    "0.2.1-7"        :scope "test"]
                  [com.cemerick/piggieback     "0.2.1"          :scope "test"]
                  [pandeiro/boot-http          "0.7.3"          :scope "test"]
                  [adzerk/boot-cljs            "1.7.228-1"      :scope "test"]
                  [adzerk/boot-cljs-repl       "0.3.2"          :scope "test"]
-                 [adzerk/boot-test            "1.1.1"          :scope "test"]
+                 [adzerk/boot-test            "1.1.2"          :scope "test"]
                  [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"]
-                 [adzerk/boot-reload          "0.4.8"          :scope "test"]
+                 [adzerk/boot-reload          "0.4.11"          :scope "test"]
                  [adzerk/bootlaces            "0.1.13"         :scope "test"]
                  [org.clojure/tools.nrepl     "0.2.12"         :scope "test"]
                  [org.clojure/tools.namespace "0.3.0-alpha3"   :scope "test"]
