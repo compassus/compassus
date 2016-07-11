@@ -36,7 +36,9 @@
 
 (task-options!
   pom {:project 'compassus
-       :version +version+})
+       :version +version+
+       :scm {:url "https://github.com/anmonteiro/compassus"}}
+  push {:ensure-clean false})
 
 (deftask build-jar []
   (set-env! :resource-paths #{"src/main"})
