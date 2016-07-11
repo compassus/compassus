@@ -284,7 +284,7 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and [Push
 
 ## Documentation
 
-There's API documentation [here](https://anmonteiro.com/compassus/doc/0.2.0/).
+There's API documentation [here](https://anmonteiro.com/compassus/doc/0.2.1/).
 
 There are also some devcards examples [here](https://anmonteiro.com/compassus/devcards/). Refer to their [source](./src/devcards/compassus/devcards/core.cljs) for more information.
 
