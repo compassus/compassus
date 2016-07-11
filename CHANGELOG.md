@@ -2,6 +2,8 @@
 
 ## master (unreleased)
 
+## 0.2.1 (2016-07-11)
+
 ### Bug fixes
 
 - Return the correct result and `:value`s in local mutations, instead of nested results that are a consequence of calling the user parser inside Compassus's parser.
