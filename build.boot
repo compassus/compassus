@@ -37,7 +37,11 @@
 (task-options!
   pom {:project 'compassus
        :version +version+
-       :scm {:url "https://github.com/anmonteiro/compassus"}}
+       :description "A routing library for Om Next."
+       :url "https://github.com/anmonteiro/compassus"
+       :scm {:url "https://github.com/anmonteiro/compassus"}
+       :license {"name" "Eclipse Public License"
+                 "url"  "http://www.eclipse.org/legal/epl-v10.html"}}
   push {:ensure-clean false})
 
 (deftask build-jar []
