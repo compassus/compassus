@@ -41,8 +41,7 @@
        :url "https://github.com/anmonteiro/compassus"
        :scm {:url "https://github.com/anmonteiro/compassus"}
        :license {"name" "Eclipse Public License"
-                 "url"  "http://www.eclipse.org/legal/epl-v10.html"}}
-  push {:ensure-clean false})
+                 "url"  "http://www.eclipse.org/legal/epl-v10.html"}})
 
 (deftask build-jar []
   (set-env! :resource-paths #{"src/main"})

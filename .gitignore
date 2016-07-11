@@ -12,3 +12,4 @@ pom.xml.asc
 .nrepl-*
 out/
 dist/
+*.DS_Store
