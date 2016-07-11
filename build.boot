@@ -101,7 +101,7 @@
       :version +version+
       :description "A routing library for Om Next."
       :output-path (str "doc/" +version+)
-      :source-uri "https://github.com/anmonteiro/compassus/blob/master/{filepath}#L{line}")))
+      :source-uri (str "https://github.com/anmonteiro/compassus/tree/" +version+ "/{filepath}#L{line}"))))
 
 (deftask release-devcards []
   (set-env! :source-paths #(conj % "src/devcards"))
