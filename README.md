@@ -42,7 +42,7 @@ To get started, require Compassus somewhere in your project.
 ```clojure
 (ns my-app.core
   (:require [om.next :as om :refer-macros [defui]]
-            [compassus.core :as compassus))
+            [compassus.core :as compassus]))
 ```
 
 ### Declaring routes
@@ -93,7 +93,7 @@ Creating a Compassus application is done by calling the `application` function. 
     {:routes {:index (compassus/index-route Index)
               :about About}
      :reconciler-opts {:state {}
-                       :parser (om/parser {:read read))
+                       :parser (om/parser {:read read))}}))
 ```
 
 The configuration map you pass to `compassus.core/application` can also contain an optional `:wrapper` key. This should either be an Om Next component factory or a function that will receive a map with `owner`, `factory` and `props` as argument. It becomes useful to specify a wrapper whenever you want to define common presentation logic for all the routes in an application. Example:
@@ -189,7 +189,7 @@ Returns the current application route.
 By default, Compassus uses Om's `default-merge` function to merge remote responses into the application state. If your server responses are keyed by the current route, use `compassus-merge` as the `:merge` in the reconciler. It will look for the current route in the remote response and merge that into the application state instead.
 
 ``` clojure
-(c/application
+(compassus/application
   {:routes ...
    :reconciler-opts {:state ...
                      :parser ...
@@ -245,7 +245,7 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and [Push
     {:routes  {:index (compassus/index-route Index)
                :about About}
      :history {:setup    #(pushy/start! history)
-               :teardown #(pushy/stop! history)}})
+               :teardown #(pushy/stop! history)}}))
 ```
 
 #### Secretary + `goog.History` example
@@ -279,7 +279,7 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and [Push
                         (reset! event-key
                           (evt/listen history EventType/NAVIGATE #(secretary/dispatch! (.-token %))))
                         (.setEnabled history true))
-               :teardown #(evt/unlistenByKey @event-key)}})
+               :teardown #(evt/unlistenByKey @event-key)}}))
 ```
 
 ## Documentation
