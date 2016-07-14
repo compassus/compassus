@@ -482,8 +482,7 @@
 
 (deftest test-remote-migrate
   (testing "default-migrate"
-    (let [tmpid #?(:clj  (om/tempid (java.util.UUID/randomUUID))
-                   :cljs (om/tempid))
+    (let [tmpid (om/tempid)
           app (c/application
                 {:routes {:index People}
                  :reconciler-opts
@@ -503,8 +502,7 @@
       (is (= (-> @r :person/by-id ffirst) 42))
       (is (contains? @r ::c/route))))
   (testing "custom migrate"
-    (let [tmpid #?(:clj  (om/tempid (java.util.UUID/randomUUID))
-                   :cljs (om/tempid))
+    (let [tmpid (om/tempid)
           app (c/application
                 {:routes {:index People}
                  :reconciler-opts
@@ -512,7 +510,7 @@
                                 :person/by-id {tmpid {:db/id tmpid
                                                       :person/name "Joe"}}})
                   :migrate (fn [app-state-pure query tempids id-key]
-                             (assoc (#'om/default-migrate app-state-pure query tempids id-key)
+                             (assoc (om/default-migrate app-state-pure query tempids id-key)
                                :random/key 42))
                   :normalize true
                   :id-key :db/id
