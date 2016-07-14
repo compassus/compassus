@@ -1,8 +1,8 @@
 # Changelog
 
-## master (unreleased)
+## [master](https://github.com/anmonteiro/compassus/compare/0.2.1...HEAD) (unreleased)
 
-## 0.2.1 (2016-07-11)
+## [0.2.1](https://github.com/anmonteiro/compassus/compare/0.2.0...0.2.1) (2016-07-11)
 
 ### Bug fixes
 
@@ -10,7 +10,7 @@
 - Make re-reading keys after `om.next/transact!` calls work properly (was missing a multimethod implementation).
 - Make sure `::compassus/route` remains in the app state after a tempid migration
 
-## 0.2.0 (2016-06-27)
+## [0.2.0](https://github.com/anmonteiro/compassus/compare/0.1.0...0.2.0) (2016-06-27)
 
 ### New features
 
