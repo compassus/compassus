@@ -18,8 +18,11 @@
 
 (defn- make-root-class
   [{:keys [routes wrapper history]}]
-  (let [route->query   (zipmap (keys routes)
-                               (map om/get-query (vals routes)))
+  (let [route->query (into {}
+                       (map (fn [[route class]]
+                              (when (om/iquery? class)
+                                [route (om/get-query class)])))
+                       routes)
         route->factory (zipmap (keys routes)
                                (map om/factory (vals routes)))
         {:keys [setup teardown]} history]
@@ -100,8 +103,9 @@
 
 (defn- infer-query
   [{:keys [query]} route]
-  [{route (cond-> query
-            (map? query) (get route))}])
+  (when-let [subq (cond-> query
+                    (map? query) (get route))]
+    [{route subq}]))
 
 (defn- default-method-impl
   [multi-fn {:keys [target] :as env} key params]

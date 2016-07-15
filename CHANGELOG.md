@@ -2,6 +2,10 @@
 
 ## [master](https://github.com/anmonteiro/compassus/compare/0.2.1...HEAD) (unreleased)
 
+### New features
+
+- Add support for routes to components without queries ([#5](https://github.com/anmonteiro/compassus/issues/5))
+
 ## [0.2.1](https://github.com/anmonteiro/compassus/compare/0.2.0...0.2.1) (2016-07-11)
 
 ### Bug fixes

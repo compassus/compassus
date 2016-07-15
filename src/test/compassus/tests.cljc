@@ -20,11 +20,13 @@
 
 (def init-state
   {:home/title "Home page"
-   :home/content "Lorem ipsum dolor sit amet."})
+   :home/content "Lorem ipsum dolor sit amet."
+   :about/title "About page"
+   :about/content "Lorem ipsum dolor sit amet."})
 
 (defmulti app-read om/dispatch)
 
-(defmethod app-read :index
+(defmethod app-read :default
   [{:keys [state query]} k _]
   {:value (select-keys @state query)})
 
@@ -117,7 +119,7 @@
       (is (fn? om-parser))
       (is (= (om-parser {:state (atom st)} (om/get-query (c/root-class *app*)))
              {::c/route :index
-              ::c/route-data init-state}))))
+              ::c/route-data (select-keys init-state (om/get-query Home))}))))
   (testing "parser integration in compassus app"
     (let [user-parser (-> *app* :config :parser)
           om-parser   (-> *app* c/get-reconciler :config :parser)]
@@ -212,7 +214,7 @@
 (defmulti remote-parser-read om/dispatch)
 (defmethod remote-parser-read :index
   [_ _ _]
-  {:value init-state})
+  {:value (select-keys init-state (om/get-query Home))})
 
 (defmulti remote-parser-mutate om/dispatch)
 
@@ -245,7 +247,7 @@
              (om/get-query (c/root-class app)) [:some-remote])
            {:some-remote [{:index (om/get-query Home)}]}))
     (c/mount! app nil)
-    (is (= (dissoc @(c/get-reconciler app) ::c/route) init-state))
+    (is (= (dissoc @(c/get-reconciler app) ::c/route) (select-keys init-state (om/get-query Home))))
     (is (= (om/gather-sends (#'om/to-env r)
              '[(fire/missiles! {:how-many 42})] [:some-remote])
            {:some-remote '[(fire/missiles! {:how-many 42})]}))
@@ -406,10 +408,8 @@
     (is (contains? (get mut-ret 'some/action!) :some-value))
     (is (contains? (get mut-ret 'some/action!) :result))
     (is (= (get-in mut-ret ['some/action! :result])
-           {:home/title "Home page"
-            :home/content "Lorem ipsum dolor sit amet."
-            ::c/route :index
-            :some/action 1}))
+           (merge init-state {::c/route :index
+                              :some/action 1})))
     (is (contains? (get mut-err 'some/error!) :om.next/error))
     (is (not (contains? (get mut-err 'some/error!) :result)))))
 
@@ -525,3 +525,51 @@
       (is (= (-> @r :person/by-id ffirst) 42))
       (is (contains? @r ::c/route))
       (is (contains? @r :random/key)))))
+
+(defui StaticRoute)
+
+(deftest test-routes-without-query
+  (testing "static route is not the index route"
+    (let [app (c/application {:routes {:index (c/index-route Home)
+                                       :static StaticRoute}
+                              :wrapper (om/factory StaticRoute)
+                              :reconciler-opts
+                              {:state (atom init-state)
+                               :parser (om/parser {:read app-read})}})
+          r (c/get-reconciler app)
+          p (-> r :config :parser)]
+      (c/mount! app nil)
+      (is (= (c/current-route app) :index))
+      (is (= (om/get-query (c/root-class app))
+             [::c/route {::c/route-data {:index [:home/title :home/content]}}]))
+      (c/set-route! app :static)
+      (is (not (contains?
+                 (p {:state (-> r :config :state)}
+                    (om/get-query (c/root-class app)))
+                 ::c/route-data)))
+      (is (empty? (om/gather-sends (#'om/to-env r)
+                    (om/get-query (c/root-class app)) [:remote])))))
+  (testing "static route is as the index route"
+    (let [app (c/application {:routes {:static (c/index-route StaticRoute)
+                                       :about About}
+                              :reconciler-opts
+                              {:state (atom init-state)
+                               :parser (om/parser {:read app-read})}})
+          r (c/get-reconciler app)
+          p (-> r :config :parser)]
+      (c/mount! app nil)
+      (is (= (c/current-route app) :static))
+      (is (= (om/get-query (c/root-class app))
+             [::c/route {::c/route-data {:about [:about/title :about/content]}}]))
+      (is (not (contains?
+                 (p {:state (-> r :config :state)}
+                    (om/get-query (c/root-class app)))
+                 ::c/route-data)))
+      (is (empty? (om/gather-sends (#'om/to-env r)
+                    (om/get-query (c/root-class app)) [:remote])))
+      (c/set-route! app :about)
+      (is (= (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
+             {::c/route :about
+              ::c/route-data (select-keys init-state (om/get-query About))}))
+      (is (empty? (om/gather-sends (#'om/to-env r)
+                    (om/get-query (c/root-class app)) [:remote]))))))
