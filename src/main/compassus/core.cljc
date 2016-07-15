@@ -237,12 +237,12 @@
     :as reconciler-opts} route->component index-route]
   (let [normalize? (not #?(:clj  (instance? clojure.lang.Atom state)
                            :cljs (satisfies? IAtom state)))
-        merged-query (transduce (map om/get-query)
-                       (completing into) [] (vals route->component))
         route-info {::route index-route}
         state (if normalize?
-                (atom (merge (om/tree->db merged-query state true)
-                             route-info))
+                (let [merged-query (transduce (map om/get-query)
+                                     (completing into) [] (vals route->component))]
+                  (atom (merge (om/tree->db merged-query state true)
+                               route-info)))
                 (doto state
                   (swap! merge route-info)))]
     (merge reconciler-opts
