@@ -83,8 +83,9 @@
                 (nil? exit?) not)]
     (comp
       (testing)
-      (bt-cljs/test-cljs :js-env :node
-        :suite-ns 'compassus.runner
+      (bt-cljs/test-cljs
+        :js-env :node
+        :namespaces #{'compassus.tests}
         :cljs-opts {:parallel-build true}
         :exit? exit?))))
 
