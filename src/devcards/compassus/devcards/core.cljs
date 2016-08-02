@@ -339,7 +339,7 @@
                 "ItemList"))
             (dom/li #js {:style #js {:marginTop "5px"}}
               (dom/a #js {:href "#"
-                          :style (when (= route :item/by-id)
+                          :style (when (= route [:item/by-id 0])
                                    #js {:color "black"
                                         :cursor "text"})
                           :onClick #(change-route owner [:item/by-id 0] %)}
