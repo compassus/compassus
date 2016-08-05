@@ -1,10 +1,23 @@
 (ns compassus.tests
-  (:require #?@(:cljs [[cljs.test :refer-macros [deftest testing is are use-fixtures]]
+  #?(:cljs (:require-macros [cljs.core.async.macros :refer [go]]))
+  (:require #?@(:cljs [[cljs.test :refer-macros [deftest testing is are use-fixtures async]]
                        [om.next :as om :refer-macros [defui]]
-                       [cljsjs.react]]
+                       [cljsjs.react]
+                       [cljs.core.async :refer [<! close! chan take!]]]
                 :clj  [[clojure.test :refer [deftest testing is are use-fixtures]]
+                       [clojure.core.async :refer [go <! close! chan <!!]]
                        [cellophane.next :as om :refer [defui]]])
             [compassus.core :as c]))
+
+;; http://stackoverflow.com/a/30781278/3417023
+(defn test-async
+  "Asynchronous test awaiting ch to produce a value or close."
+  [ch]
+  #?(:clj
+     (<!! ch)
+     :cljs
+     (async done
+       (take! ch (fn [_] (done))))))
 
 (def ^:dynamic *app*)
 
@@ -32,19 +45,28 @@
 
 (defmulti app-mutate om/dispatch)
 
-(defn wrap-app [test-fn]
-  (binding [*app* (c/application
-                    {:routes {:index (c/index-route Home)
-                              :about About}
-                     :reconciler-opts
-                     {:state (atom init-state)
-                      :parser (om/parser {:read app-read
-                                          :mutate app-mutate})}})]
-    ;; make setTimeout execute synchronously
-    #?(:cljs (set! js/setTimeout (fn [f t] (f))))
-    (test-fn)))
+(defn set-app! []
+  (set! *app*
+    (c/application
+      {:routes {:index (c/index-route Home)
+                :about About}
+       :reconciler-opts
+       {:state (atom init-state)
+        :parser (om/parser {:read app-read
+                            :mutate app-mutate})}})))
 
-(use-fixtures :each wrap-app)
+(defn unset-app! []
+  (set! *app* nil))
+
+#?(:clj  (use-fixtures :each
+           (fn [test-fn]
+             (binding [*app* nil]
+               (set-app!)
+               (test-fn)
+               (unset-app!))))
+   :cljs (use-fixtures :each
+           {:before set-app!
+            :after unset-app!}))
 
 (deftest test-create-app
   (is (instance? compassus.core.CompassusApplication *app*))
@@ -230,6 +252,7 @@
 (deftest test-remote-integration
   (let [remote-parser (om/parser {:read   remote-parser-read
                                   :mutate remote-parser-mutate})
+        c (chan)
         app (c/application
               {:routes {:index (c/index-route Home)
                         :about About
@@ -241,7 +264,8 @@
                 :remotes [:some-remote]
                 :merge  c/compassus-merge
                 :send   (fn [{:keys [some-remote]} cb]
-                          (cb (remote-parser {} some-remote)))}})
+                          (cb (remote-parser {} some-remote))
+                          (close! c))}})
         r (c/get-reconciler app)]
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])
@@ -251,9 +275,6 @@
     (is (= (om/gather-sends (#'om/to-env r)
              '[(fire/missiles! {:how-many 42})] [:some-remote])
            {:some-remote '[(fire/missiles! {:how-many 42})]}))
-    (om/transact! r '[(fire/missiles! {:how-many 3})])
-    (is (= (-> @r (get 'fire/missiles!) :result)
-           {:missiles/fired? 3}))
     (c/set-route! app :about)
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])
@@ -261,7 +282,13 @@
     (c/set-route! app :other)
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])
-           {:some-remote [{:other [:changed/key :updated/ast]}]}))))
+           {:some-remote [{:other [:changed/key :updated/ast]}]}))
+    (test-async
+      (go
+        (om/transact! r '[(fire/missiles! {:how-many 3})])
+        (let [_ (<! c)]
+          (is (= (-> @r (get 'fire/missiles!) :result)
+                {:missiles/fired? 3})))))))
 
 (deftest test-override-merge
   (let [remote-parser (om/parser {:read   remote-parser-read
@@ -549,7 +576,7 @@
                  ::c/route-data)))
       (is (empty? (om/gather-sends (#'om/to-env r)
                     (om/get-query (c/root-class app)) [:remote])))))
-  (testing "static route is as the index route"
+  (testing "static route as the index route"
     (let [app (c/application {:routes {:static (c/index-route StaticRoute)
                                        :about About}
                               :reconciler-opts
