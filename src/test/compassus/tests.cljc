@@ -283,12 +283,12 @@
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])
            {:some-remote [{:other [:changed/key :updated/ast]}]}))
+    (om/transact! r '[(fire/missiles! {:how-many 3})])
     (test-async
       (go
-        (om/transact! r '[(fire/missiles! {:how-many 3})])
         (let [_ (<! c)]
           (is (= (-> @r (get 'fire/missiles!) :result)
-                {:missiles/fired? 3})))))))
+                 {:missiles/fired? 3})))))))
 
 (deftest test-override-merge
   (let [remote-parser (om/parser {:read   remote-parser-read
