@@ -1,4 +1,4 @@
-# Compassus [![CircleCI](https://circleci.com/gh/anmonteiro/compassus.svg?style=svg&circle-token=de2d254556b53778560cfff5f354fffee6100501)](https://circleci.com/gh/anmonteiro/compassus)
+# Compassus [![CircleCI](https://circleci.com/gh/compassus/compassus.svg?style=svg)](https://circleci.com/gh/compassus/compassus)
 
 A routing library for Om Next.
 
@@ -284,9 +284,9 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and [Push
 
 ## Documentation
 
-There's API documentation [here](https://anmonteiro.com/compassus/doc/0.2.1/).
+There's API documentation [here](https://compassus.github.io/compassus/doc/0.2.1/).
 
-There are also some devcards examples [here](https://anmonteiro.com/compassus/devcards/). Refer to their [source](./src/devcards/compassus/devcards/core.cljs) for more information.
+There are also some devcards examples [here](https://compassus.github.io/compassus/devcards/). Refer to their [source](./src/devcards/compassus/devcards/core.cljs) for more information.
 
 ## Copyright & License
 

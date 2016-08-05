@@ -39,8 +39,8 @@
   pom {:project 'compassus
        :version +version+
        :description "A routing library for Om Next."
-       :url "https://github.com/anmonteiro/compassus"
-       :scm {:url "https://github.com/anmonteiro/compassus"}
+       :url "https://github.com/compassus/compassus"
+       :scm {:url "https://github.com/compassus/compassus"}
        :license {"name" "Eclipse Public License"
                  "url"  "http://www.eclipse.org/legal/epl-v10.html"}})
 
@@ -102,7 +102,7 @@
       :version +version+
       :description "A routing library for Om Next."
       :output-path (str "doc/" +version+)
-      :source-uri (str "https://github.com/anmonteiro/compassus/tree/" +version+ "/{filepath}#L{line}"))))
+      :source-uri (str "https://github.com/compassus/compassus/tree/" +version+ "/{filepath}#L{line}"))))
 
 (deftask release-devcards []
   (set-env! :source-paths #(conj % "src/devcards"))
