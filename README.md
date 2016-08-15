@@ -2,6 +2,8 @@
 
 A routing library for Om Next.
 
+Read the [announcement blog post](https://anmonteiro.com/2016/06/the-quest-for-a-unified-routing-solution-in-om-next/).
+
 ## Contents
 
 - [Installation](#installation)
