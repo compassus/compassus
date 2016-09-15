@@ -213,6 +213,33 @@ To change the current route of a Compassus application, call the function `set-r
 (compassus/set-route! this :about)
 ```
 
+The `set-route!` function can take an additional argument, a map with the following
+supported options:
+
+- `queue?`: boolean indicating if the application root should be queued for re-render.
+Defaults to true;
+- `params`: map of parameters that will be merged into the application state.
+- `tx`: transaction(s) (e.g.: `'(do/it!)` or `'[(do/this!) (do/that!)]`) that will
+be run after the mutation that changes the route. Can be used to perform additional
+setup for a given route (such as setting the route's parameters).
+
+Examples:
+
+``` clojure
+;; don't re-render from root
+(compassus/set-route! app :about {:queue? false})
+
+;; don't re-render from root, but re-read `:friends/list`
+(compassus/set-route! app :about {:queue? false
+                                  :tx [:friends/list]})
+
+;; merge `{:route-params {:id 42}}` into the app-state
+(compassus/set-route! app :about {:params {:route-params {:id 42}}})
+
+;; run the `set-route-params!` tx after changing route.
+(compassus/set-route! app :about {:tx '[(set-route-params! {:id 42})]})
+```
+
 ### Integrating with browser history
 
 URL (or path) navigation is an orthogonal concern to routing in Om Next components, which is mainly about swapping components in and out according to the selected route. However, it might be desirable for applications to setup history navigation only when the application mounts. In addition, applications might also want to teardown history if the application unmounts from the DOM. Thus, the configuration map passed to `compassus.core/application` also accepts a `:history` key which should contain a map with the following keys:

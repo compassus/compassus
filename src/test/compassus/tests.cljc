@@ -600,3 +600,25 @@
               ::c/route-data (select-keys init-state (om/get-query About))}))
       (is (empty? (om/gather-sends (#'om/to-env r)
                     (om/get-query (c/root-class app)) [:remote]))))))
+
+(defmethod app-mutate 'set-params!
+  [{:keys [state]} _ params]
+  {:action #(swap! state merge params)})
+
+(deftest test-compassus-8
+  (let [prev-route (c/current-route *app*)
+        tx (c/set-route! *app* :about {:params {:route-params {:foo 42}}})]
+    (is (= (-> tx (get-in ['compassus.core/set-route! :keys]))
+           [::c/route ::c/route-data :route-params]))
+    (is (not= prev-route (c/current-route *app*)))
+    (is (= (c/current-route *app*) :about))
+    (is (= (-> @(c/get-reconciler *app*) :route-params) {:foo 42}))
+    (is (not (contains? @(c/get-reconciler *app*) :route))))
+  (let [prev-route (c/current-route *app*)]
+    (c/set-route! *app* :about {:tx '[(set-params! {:some-params {:foo 42}})]})
+    (is (= (-> @(c/get-reconciler *app*) :some-params) {:foo 42})))
+  (let [prev-route (c/current-route *app*)]
+    (c/set-route! *app* :about {:params {:other-params {:foo 42}}
+                                :tx     '(set-params! {:more-stuff {:bar 42}})})
+    (is (= (-> @(c/get-reconciler *app*) :other-params) {:foo 42}))
+    (is (= (-> @(c/get-reconciler *app*) :more-stuff) {:bar 42}))))

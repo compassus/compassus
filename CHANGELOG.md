@@ -4,7 +4,8 @@
 
 ### New features
 
-- Add support for routes to components without queries ([#5](https://github.com/anmonteiro/compassus/issues/5))
+- Add support for routes to components without queries ([#5](https://github.com/compassus/compassus/issues/5)).
+- Support additional options (`:params` and `:tx`) to `set-route!` ([#8](https://github.com/compassus/compassus/issues/8))
 
 ## [0.2.1](https://github.com/anmonteiro/compassus/compare/0.2.0...0.2.1) (2016-07-11)
 

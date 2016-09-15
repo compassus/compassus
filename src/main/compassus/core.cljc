@@ -87,19 +87,33 @@
 (defn set-route!
   "Given a reconciler, Compassus application or component, update the application's
    route. `next-route` may be a keyword or an ident. Takes an optional third
-   options argument. Supported options are `queue?`, a boolean denoting if the
-   application root should be queued for re-render. Defaults to true."
+   options argument, a map with the following supported options:
+
+     :queue? - boolean indicating if the application root should be queued for
+               re-render. Defaults to true.
+
+     :params - map of parameters that will be merged into the application state.
+
+     tx      - transaction(s) (e.g.: `'(do/it!)` or `'[(do/this!) (do/that!)]`)
+               that will be run after the mutation that changes the route. Can be
+               used to perform additional setup for a given route (such as setting
+               the route's parameters).
+     "
   ([x next-route]
    (set-route! x next-route {:queue? true}))
-  ([x next-route {:keys [queue?]}]
+  ([x next-route {:keys [queue? params tx]}]
    {:pre [(or (om/reconciler? x) (application? x) (om/component? x))
           (or (util/ident? next-route) (keyword? next-route))]}
    (let [reconciler (cond-> x
                       (application? x) get-reconciler
-                      (om/component? x) om/get-reconciler)]
-     (om/transact! reconciler (cond-> `[(set-route! {:route ~next-route})]
-                                queue?
-                                (into (om/transform-reads reconciler [::route-data])))))))
+                      (om/component? x) om/get-reconciler)
+         tx (when-not (nil? tx)
+              (cond->> tx
+                (not (vector? tx)) vector))]
+     (om/transact! reconciler
+       (cond-> (into `[(set-route! ~(merge {:route next-route} params))] tx)
+         queue?
+         (into (om/transform-reads reconciler [::route-data])))))))
 
 (defn- infer-query
   [{:keys [query]} route]
@@ -187,10 +201,10 @@
               (some? ret) parser/expr->ast)}))
 
 (defmethod mutate [:default 'compassus.core/set-route!]
-  [{:keys [state] :as env} key params]
-  (let [{:keys [route]} params]
-    {:value {:keys [::route ::route-data]}
-     :action #(swap! state assoc ::route route)}))
+  [{:keys [state] :as env} key {:keys [route] :as params}]
+  (let [params (dissoc params :route)]
+    {:value {:keys (into [::route ::route-data] (keys params))}
+     :action #(swap! state merge {::route route} params)}))
 
 (defn- generate-parser-fn [f user-parser]
   (fn [{:keys [state] :as env} key params]
