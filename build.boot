@@ -3,16 +3,17 @@
 (set-env!
  :source-paths    #{"src/main"}
  :resource-paths  #{"resources"}
- :dependencies '[[org.clojure/clojurescript   "1.9.216"        :scope "provided"]
+ :dependencies '[[org.clojure/clojure         "1.9.0-alpha12"  :scope "provided"]
+                 [org.clojure/clojurescript   "1.9.229"        :scope "provided"]
                  [com.ladderlife/cellophane   "0.3.5"          :scope "provided"]
-                 [org.omcljs/om               "1.0.0-alpha41"  :scope "provided"
+                 [org.omcljs/om               "1.0.0-alpha45"  :scope "provided"
                   :exclusions [cljsjs/react]]
 
                  [cljsjs/react-with-addons    "15.3.1-0"       :scope "test"]
                  [cljsjs/react-dom            "15.3.1-0"       :scope "test"
                   :exclusions [cljsjs/react]]
                  [com.cognitect/transit-clj   "0.8.288"        :scope "test"]
-                 [org.clojure/core.async      "0.2.385"        :scope "test"]
+                 [org.clojure/core.async      "0.2.391"        :scope "test"]
                  [devcards                    "0.2.1-7"        :scope "test"
                   :exclusions [cljsjs/react cljsjs/react-dom]]
                  [com.cemerick/piggieback     "0.2.1"          :scope "test"]
@@ -26,7 +27,7 @@
                  [org.clojure/tools.nrepl     "0.2.12"         :scope "test"]
                  [org.clojure/tools.namespace "0.3.0-alpha3"   :scope "test"]
                  [weasel                      "0.7.0"          :scope "test"]
-                 [boot-codox                  "0.9.6"          :scope "test"]])
+                 [boot-codox                  "0.10.0"         :scope "test"]])
 
 (require
  '[adzerk.boot-cljs      :refer [cljs]]

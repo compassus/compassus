@@ -191,7 +191,7 @@ Example:
      :mixins [(compassus/wrap-render wrapper) (compassus/query [:app-title :current-user])]}))
 ```
 
-##### A note on mixins
+**A note on mixins**
 
 Mixins are just data. Compassus built-in mixin constructors are just helpers around
 assembling this data. For example, building a mixin to hook into the Compassus root
