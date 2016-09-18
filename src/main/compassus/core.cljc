@@ -273,13 +273,14 @@
 (defn- process-reconciler-opts
   [{:keys [state parser migrate]
     :or {migrate #'om/default-migrate}
-    :as reconciler-opts} route->component index-route]
+    :as reconciler-opts} route->component index-route mixins]
   (let [normalize? (not #?(:clj  (instance? clojure.lang.Atom state)
                            :cljs (satisfies? IAtom state)))
         route-info {::route index-route}
         state (if normalize?
-                (let [merged-query (transduce (map om/get-query)
-                                     (completing into) [] (vals route->component))]
+                (let [query-mixin (reduce into [] (collect :query mixins))
+                      merged-query (transduce (map om/get-query)
+                                     (completing into) query-mixin (vals route->component))]
                   (atom (merge (om/tree->db merged-query state true)
                                route-info)))
                 (doto state
@@ -360,7 +361,8 @@
   [{:keys [routes mixins reconciler-opts] :as opts}]
   (let [index-route (find-index-route routes)
         route->component (normalize-routes routes index-route)
-        reconciler-opts' (process-reconciler-opts reconciler-opts route->component index-route)
+        reconciler-opts' (process-reconciler-opts reconciler-opts route->component
+                           index-route mixins)
         reconciler (om/reconciler reconciler-opts')
         opts' (merge opts {:routes route->component
                            :reconciler-opts reconciler-opts'})]

@@ -204,7 +204,7 @@
                                               :parser (om/parser {:read posts-read})}})
         r (c/get-reconciler app)
         p (-> r :config :parser)]
-    (is (not= posts-init-state (dissoc @r ::c/route)))
+    (is (not= posts-init-state (dissoc @r ::c/route ::om/tables)))
     (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
                (get ::c/route-data))
            posts-init-state))))
@@ -720,3 +720,25 @@
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])
            {:some-remote [{:foo [:bar :baz]}]}))))
+
+(defui MixinPostList
+  static om/IQuery
+  (query [this]
+    [:foo]))
+
+(defn mixin-posts-read
+  [{:keys [state query]} k _]
+  (let [st @state]
+    {:value (om/db->tree query (get st k) st)}))
+
+(deftest test-app-normalizes-mixin-queries
+  (let [app (c/application {:routes {:posts MixinPostList}
+                            :mixins [(c/query [{:posts/list (om/get-query Post)}])]
+                            :reconciler-opts {:state posts-init-state
+                                              :parser (om/parser {:read mixin-posts-read})}})
+        r (c/get-reconciler app)
+        p (-> r :config :parser)]
+    (is (not= posts-init-state (dissoc @r ::c/route ::om/tables)))
+    (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
+               (get ::c/mixin-data))
+           posts-init-state))))
