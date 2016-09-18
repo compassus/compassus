@@ -6,8 +6,8 @@
                        [cljs.core.async :refer [<! close! chan take!]]]
                 :clj  [[clojure.test :refer [deftest testing is are use-fixtures]]
                        [clojure.core.async :refer [go <! close! chan <!!]]
-                       [cellophane.next :as om :refer [defui]]])
-            [om.next.protocols :as p]
+                       [cellophane.next :as om :refer [defui]]
+                       [cellophane.protocols :as p]])
             [compassus.core :as c]))
 
 (def test-utils #?(:cljs js/React.addons.TestUtils))
@@ -682,18 +682,20 @@
                                               {:foo {:bar 42 :baz 43}}))
                                :parser (om/parser {:read mixins-read})}})
           r (c/get-reconciler app)
-          p (-> r :config :parser)]
+          p (-> r :config :parser)
+          root (c/root-class app)]
       (is (= (om/params (c/root-class app))
              {:foo [:bar :baz]}))
-      (is (= (om/query (c/root-class app))
+      (is (= #?(:clj  ((-> root meta :query) root)
+                :cljs (om/query root))
              [::c/route
               {::c/route-data {:index [:home/title :home/content]}}
               {::c/mixin-data [{:foo '?foo}]}]))
-      (is (= (om/get-query (c/root-class app))
+      (is (= (om/get-query root)
              [::c/route
               {::c/route-data {:index [:home/title :home/content]}}
               {::c/mixin-data [{:foo [:bar :baz]}]}]))
-      (is (= (p (#'om/to-env r) (om/get-query (c/root-class app)))
+      (is (= (p (#'om/to-env r) (om/get-query root))
              {::c/route :index
               ::c/route-data (select-keys init-state (om/get-query Home))
               ::c/mixin-data (select-keys @r [:foo])})))))
