@@ -111,7 +111,7 @@
 (def app
   (c/application {:routes {:app/home (c/index-route Home)
                            :app/about About}
-                  :wrapper wrapper
+                  :mixins [(c/wrap-render wrapper)]
                   :reconciler-opts {:state (atom app-state)
                                     :parser (om/parser {:read read})}}))
 
@@ -372,7 +372,7 @@
 (def idents-app
   (c/application {:routes {:items (c/index-route ItemList)
                            [:item/by-id 0] Item}
-                  :wrapper idents-wrapper
+                  :mixins [(c/wrap-render idents-wrapper)]
                   :reconciler-opts {:state idents-app-state
                                     :parser (om/parser {:read idents-read})}}))
 
@@ -382,7 +382,7 @@
   You can also specify routes as idents. In this case, the app routes are:
   ```clojure
   {:items (c/index-route ItemList)
-  [:item/by-id 0] Item}
+   [:item/by-id 0] Item}
   ```
   "
   (dom-node

@@ -6,6 +6,9 @@
 
 - Add support for routes to components without queries ([#5](https://github.com/compassus/compassus/issues/5)).
 - Support additional options (`:params` and `:tx`) to `set-route!` ([#8](https://github.com/compassus/compassus/issues/8))
+- Add mixins support. Read more about mixins [here](https://github.com/compassus/compassus/blob/master/README.md#mixins).
+- **BREAKING**: removed the `:wrapper` option from the `compassus.core/application`
+configuration map. Use the `compassus.core/wrap-render` mixin instead.
 
 ## [0.2.1](https://github.com/anmonteiro/compassus/compare/0.2.0...0.2.1) (2016-07-11)
 

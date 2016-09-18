@@ -4,7 +4,8 @@
                        [om.next :as om :refer-macros [ui]]]
                 :clj  [[cellophane.next :as om :refer [ui]]])
             [om.util :as util]
-            [om.next.impl.parser :as parser]))
+            [om.next.impl.parser :as parser]
+            [compassus.util :refer [collect]]))
 
 (defn get-reconciler
   "Returns the Om Next reconciler for the given Compassus application."
@@ -17,7 +18,7 @@
   (-> app :config :root-class))
 
 (defn- make-root-class
-  [{:keys [routes wrapper history]}]
+  [{:keys [routes mixins history]}]
   (let [route->query (into {}
                        (map (fn [[route class]]
                               (when (om/iquery? class)
@@ -25,11 +26,23 @@
                        routes)
         route->factory (zipmap (keys routes)
                                (map om/factory (vals routes)))
-        {:keys [setup teardown]} history]
+        {:keys [setup teardown]} history
+        wrap-render (reduce #(%2 %1)
+                      (fn [{:keys [factory props]}]
+                        (factory props))
+                      (collect :render mixins))
+        query-mixin (reduce into [] (collect :query mixins))
+        query (cond-> [::route {::route-data route->query}]
+                (not (empty? query-mixin))
+                (conj {::mixin-data query-mixin}))
+        params (reduce merge (collect :params mixins))]
     (ui
+      static om/IQueryParams
+      (params [this]
+        params)
       static om/IQuery
       (query [this]
-        [::route {::route-data route->query}])
+        query)
       Object
       (componentDidMount [this]
         (when setup
@@ -42,11 +55,9 @@
               route (::route props)
               route-data (::route-data props)
               factory (get route->factory route)]
-          (if wrapper
-            (wrapper {:owner   this
-                      :factory factory
-                      :props   route-data})
-            (factory route-data)))))))
+          (wrap-render {:owner   this
+                        :factory factory
+                        :props   route-data}))))))
 
 (defrecord ^:private CompassusApplication [config state])
 
@@ -94,7 +105,7 @@
 
      :params - map of parameters that will be merged into the application state.
 
-     tx      - transaction(s) (e.g.: `'(do/it!)` or `'[(do/this!) (do/that!)]`)
+     :tx     - transaction(s) (e.g.: `'(do/it!)` or `'[(do/this!) (do/that!)]`)
                that will be run after the mutation that changes the route. Can be
                used to perform additional setup for a given route (such as setting
                the route's parameters).
@@ -164,6 +175,16 @@
   [{:keys [target ast route user-parser] :as env} key params]
   (let [query (infer-query env route)
         ret (user-parser env query target)]
+    (when-not (empty? ret)
+      {target (parser/expr->ast (first ret))})))
+
+(defmethod read [nil ::mixin-data]
+  [{:keys [query user-parser] :as env} key params]
+  {:value (user-parser env query)})
+
+(defmethod read [:default ::mixin-data]
+  [{:keys [target query user-parser] :as env} key params]
+  (let [ret (user-parser env query target)]
     (when-not (empty? ret)
       {target (parser/expr->ast (first ret))})))
 
@@ -290,25 +311,53 @@
 
    Optional parameters:
 
-     :wrapper         - a function or an Om Next component factory that will wrap
-                        all the routes in the application. Useful for applications
-                        that have a common layout for every route.
+     :mixins          - a vector of mixins that hook into the generated Compassus
+                        root component's functionality in order to extend its
+                        capabilities or change its behavior. Currently, mixins can
+                        hook into the following component constructs / lifecycle:
+                        `:query`, `:params` and `render`. The currently built-in
+                        mixins (mixin constructors) are:
 
-                        It will be passed a map with the following keys (props in
-                        the case of a component factory):
+                        `compassus.core/wrap-render`:
 
-                        :owner   - the parent component instance
+                          - constructs a mixin that will wrap all the routes in
+                          the application. Useful for applications that have a
+                          common layout for every route.
 
-                        :factory - the component factory for the current route
+                          Takes a function or an Om Next component factory, which
+                          will be passed a map with the following keys (props in
+                          the case of a component factory):
 
-                        :props   - the props for the current route.
+                            :owner   - the parent component instance
+
+                            :factory - the component factory for the current route
+
+                            :props   - the props for the current route.
+
+                          Example: (compassus.core/wrap-render
+                                     (fn [{:keys [owner factory props]}]
+                                       (dom/div nil
+                                         (dom/h1 nil \"App title\")
+                                         (factory props))))
+
+                        `compassus.core/query`:
+
+                          - builds a mixin that will add its parameter (a query)
+                          to the root application's query. Useful to query for data
+                          that is to be used e.g. in the `wrap-render` mixin.
+
+                        `compassus.core/params`:
+
+                          - builds a mixin that will add its parameter (query params)
+                          to the root application's query params. Similar to the
+                          `query` mixin, but for `om.next/IQueryParams`.
 
      :history         - a map with keys `:setup` and `:teardown`. Values should
                         be functions of no arguments that will be called when the
                         application mounts and unmounts, respectively. Used to
                         set up / teardown browser history listeners.
    "
-  [{:keys [routes wrapper reconciler-opts] :as opts}]
+  [{:keys [routes mixins reconciler-opts] :as opts}]
   (let [index-route (find-index-route routes)
         route->component (normalize-routes routes index-route)
         reconciler-opts' (process-reconciler-opts reconciler-opts route->component index-route)
@@ -317,7 +366,24 @@
                            :reconciler-opts reconciler-opts'})]
     (CompassusApplication.
       {:route->component route->component
+       :mixins           mixins
        :parser           (:parser reconciler-opts)
        :reconciler       reconciler
        :root-class       (make-root-class opts')}
       (atom {}))))
+
+;; =============================================================================
+;; Mixins
+
+(defn wrap-render [wrapper]
+  {:render (fn [render-fn]
+             (fn [opts]
+               (wrapper (assoc opts :factory
+                          (fn [_]
+                            (render-fn opts))))))})
+
+(defn query [query]
+  {:query query})
+
+(defn params [params]
+  {:params params})

@@ -11,6 +11,7 @@ Read the [announcement blog post](https://anmonteiro.com/2016/06/the-quest-for-a
   - [Declaring routes](#declaring-routes)
   - [Assembling a Compassus application](#assembling-a-compassus-application)
     - [Implementing the parser](#implementing-the-parser)
+    - [Mixins](#mixins)
     - [Utility functions](#utility-functions)
   - [Changing routes](#changing-routes)
   - [Integrating with browser history](#integrating-with-browser-history)
@@ -98,26 +99,6 @@ Creating a Compassus application is done by calling the `application` function. 
                        :parser (om/parser {:read read))}}))
 ```
 
-The configuration map you pass to `compassus.core/application` can also contain an optional `:wrapper` key. This should either be an Om Next component factory or a function that will receive a map with `owner`, `factory` and `props` as argument. It becomes useful to specify a wrapper whenever you want to define common presentation logic for all the routes in an application. Example:
-
-``` clojure
-(defui Wrapper
-  Object
-  (render [this]
-    (let [{:keys [owner factory props]} (om/props this)]
-      ;; implement common presentation logic for all routes
-      ;; call the given factory with props in the end
-      (factory props))))
-
-(def wrapper (om/factory Wrapper))
-
-(def app
-  (compassus/application
-    {:routes ...
-     :reconciler-opts ...
-     :wrapper wrapper}))
-```
-
 #### Implementing the parser
 
 The parser is a required parameter to an Om Next reconciler. As such, a Compassus application also needs to have one, the advantage being that most of the plumbing has been done for you. The parser in a Compassus application will dispatch on the current route. Therefore, all that is required of a parser implementation is that it knows how to handle the routes that your application will transition to. An example is shown below with routes we have previously declared.
@@ -140,6 +121,89 @@ The parser is a required parameter to an Om Next reconciler. As such, a Compassu
 ```
 
 For convenience, the parser's `env` argument contains a `:route` key with the current route of the Compassus application.
+
+#### Mixins
+
+The configuration map you pass to `compassus.core/application` can also contain an
+optional `:mixins` key. Its value should be a vector of mixins. Mixins hook into
+the generated Compassus root component's functionality in order to extend its capabilities
+or change its behavior. Currently, mixins can hook into the following component
+constructs / lifecycle parts: `:query`, `:params` and `render`. The currently built-in
+mixins (mixin constructors) are:
+
+- **`compassus.core/wrap-render`**: constructs a mixin that will wrap all the routes
+in the application. It becomes useful to specify this mixin whenever you want to
+define common presentation logic for all the routes in an application. `wrap-render`
+takes a function or an Om Next component factory, which will be passed a map with
+the following keys (props in the case of a component factory):
+
+  - :owner   - the parent component instance
+  - :factory - the component factory for the current route
+  - :props   - the props for the current route.
+
+Example:
+
+``` clojure
+(defui Wrapper
+  Object
+  (render [this]
+    (let [{:keys [owner factory props]} (om/props this)]
+      ;; implement common presentation logic for all routes
+      ;; call the given factory with props in the end
+      (factory props))))
+
+(def wrapper (om/factory Wrapper))
+
+(def app
+  (compassus/application
+    {:routes ...
+     :reconciler-opts ...
+     :mixins [(compassus/wrap-render wrapper)]}))
+```
+
+- **`compassus.core/query`**: builds a mixin that will add its parameter (a query)
+to the root application's query. Useful to query for data that is to be used e.g.
+in the `wrap-render` mixin.
+
+- **`compassus.core/params`**: builds a mixin that will add its parameter (query params)
+to the root application's query params. Similar to the `query` mixin, but for `om.next/IQueryParams`.
+
+Example:
+
+
+``` clojure
+(defui Wrapper
+  Object
+  (render [this]
+    (let [{:keys [owner factory props]} (om/props this)
+          {:keys [app-title current-user]} (::compassus/mixin-data props)]
+      (dom/div nil
+        (dom/h1 nil app-title)
+        (dom/h3 nil (str "Current user: " current-user))
+        (factory props)))))
+
+(def wrapper (om/factory Wrapper))
+
+(def app
+  (compassus/application
+    {:routes ...
+     :reconciler-opts ...
+     :mixins [(compassus/wrap-render wrapper) (compassus/query [:app-title :current-user])]}))
+```
+
+##### A note on mixins
+
+Mixins are just data. Compassus built-in mixin constructors are just helpers around
+assembling this data. For example, building a mixin to hook into the Compassus root
+component's query could also be done as shown below:
+
+``` clojure
+(def app
+  (compassus/application
+    {:routes ...
+     :reconciler-opts ...
+     :mixins [{:query [:app-title :current-user]}]}))
+```
 
 #### Utility functions
 
@@ -217,7 +281,7 @@ The `set-route!` function can take an additional argument, a map with the follow
 supported options:
 
 - `queue?`: boolean indicating if the application root should be queued for re-render.
-Defaults to true;
+Defaults to true.
 - `params`: map of parameters that will be merged into the application state.
 - `tx`: transaction(s) (e.g.: `'(do/it!)` or `'[(do/this!) (do/that!)]`) that will
 be run after the mutation that changes the route. Can be used to perform additional
