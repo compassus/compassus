@@ -8,9 +8,8 @@
 ;; =============================================================================
 ;; Setup
 
-(defn init! []
-  (enable-console-print!)
-  (dc/start-devcard-ui!))
+(enable-console-print!)
+(dc/start-devcard-ui!)
 
 ;; =============================================================================
 ;; Without normalization

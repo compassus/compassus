@@ -1,3 +1,2 @@
 {:require [compassus.devcards.core]
- :init-fns [compassus.devcards.core/init!]
  :compiler-options {:asset-path "js/devcards.out"}}

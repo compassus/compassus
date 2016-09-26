@@ -3,7 +3,7 @@
 (set-env!
  :source-paths    #{"src/main"}
  :resource-paths  #{"resources"}
- :dependencies '[[org.clojure/clojure         "1.9.0-alpha12"  :scope "provided"]
+ :dependencies '[[org.clojure/clojure         "1.9.0-alpha13"  :scope "provided"]
                  [org.clojure/clojurescript   "1.9.229"        :scope "provided"]
                  [com.ladderlife/cellophane   "0.3.5"          :scope "provided"]
                  [org.omcljs/om               "1.0.0-alpha45"  :scope "provided"

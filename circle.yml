@@ -16,5 +16,4 @@ dependencies:
 
 test:
   override:
-    - boot test-clj
-    - boot test-cljs
+    - boot test-clj test-cljs
