@@ -1,15 +1,11 @@
 (ns compassus.tests
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go]]))
-  (:require #?@(:cljs [[cljs.test :refer-macros [deftest testing is are use-fixtures async]]
-                       [om.next :as om :refer-macros [defui ui]]
-                       [cljsjs.react]
-                       [cljs.core.async :refer [<! close! chan take!]]
-                       [goog.object :as gobj]]
-                :clj  [[clojure.test :refer [deftest testing is are use-fixtures]]
-                       [clojure.core.async :refer [go <! close! chan <!!]]
-                       [cellophane.next :as om :refer [defui ui]]
-                       [cellophane.protocols :as p]])
-            [om.next.protocols :as om-p]
+  (:require #?@(:cljs [[cljsjs.react]
+                       [goog.object :as gobj]])
+            [clojure.core.async :refer [<! close! chan take! #?@(:clj [go <!!])]]
+            [clojure.test :refer [deftest testing is are use-fixtures #?(:cljs async)]]
+            [om.next :as om :refer [defui ui]]
+            [om.next.protocols :as p]
             [compassus.core :as c]))
 
 (def test-utils #?(:cljs js/React.addons.TestUtils))
@@ -671,20 +667,14 @@
                                    ([props & children]
                                     (swap! parent-atom assoc class @#'om/*parent*)
                                     (let [t (if-not (nil? @#'om/*reconciler*)
-                                              (om-p/basis-t @#'om/*reconciler*)
+                                              (p/basis-t @#'om/*reconciler*)
                                               0)]
                                       #?(:clj  (class nil nil
                                                  {:omcljs$value      props
                                                   :omcljs$mounted?   (atom false)
                                                   :omcljs$reconciler @#'om/*reconciler*
                                                   :omcljs$parent     @#'om/*parent*
-                                                  :omcljs$depth      @#'om/*depth*
-                                                  ;; TODO: remove once we upgrade to Om alpha46
-                                                  :cellophaneclj$reconciler @#'om/*reconciler*
-                                                  :cellophaneclj$parent     @#'om/*parent*
-                                                  :cellophaneclj$value      props
-                                                  :cellophaneclj$mounted?   (atom false)
-                                                  :cellophaneclj$depth      @#'om/*depth*}
+                                                  :omcljs$depth      @#'om/*depth*}
                                                  nil)
                                          :cljs (js/React.createElement class
                                                  #js {:omcljs$value      (om/om-props props t)
@@ -766,7 +756,7 @@
           root (c/root-class app)
           c (c/mount! app :target)
           #?@(:clj [wrapper (p/-render c)])
-          wrapper-props #?(:clj  (:cellophaneclj$value (p/-props wrapper))
+          wrapper-props #?(:clj  (:omcljs$value (p/-props wrapper))
                            :cljs (-> (.getRenderOutput shallow-renderer)
                                    (gobj/get "props") om/get-props om/unwrap))]
       (is (every? (partial contains? (om/get-computed wrapper-props)) [:owner :factory :props]))

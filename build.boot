@@ -5,8 +5,7 @@
  :resource-paths  #{"resources"}
  :dependencies '[[org.clojure/clojure         "1.9.0-alpha13"  :scope "provided"]
                  [org.clojure/clojurescript   "1.9.229"        :scope "provided"]
-                 [com.ladderlife/cellophane   "0.3.5"          :scope "provided"]
-                 [org.omcljs/om               "1.0.0-alpha45"  :scope "provided"
+                 [org.omcljs/om               "1.0.0-alpha46"  :scope "provided"
                   :exclusions [cljsjs/react]]
 
                  [cljsjs/react-with-addons    "15.3.1-0"       :scope "test"]

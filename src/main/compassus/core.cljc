@@ -1,8 +1,8 @@
 (ns compassus.core
   #?(:clj (:refer-clojure :exclude [read]))
-  (:require #?@(:cljs [[goog.object :as gobj]
-                       [om.next :as om :refer-macros [ui]]]
-                :clj  [[cellophane.next :as om :refer [ui]]])
+  (:require #?@(:cljs [[goog.object :as gobj]])
+            [om.next :as om #?(:clj  :refer
+                               :cljs :refer-macros) [ui]]
             [om.util :as util]
             [om.next.impl.parser :as parser]
             [compassus.util :refer [collect collect-1]]))

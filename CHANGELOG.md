@@ -10,6 +10,11 @@
 - **BREAKING**: removed the `:wrapper` option from the `compassus.core/application`
 configuration map. Use the `compassus.core/wrap-render` mixin instead.
 
+### Changes
+
+- Drop the Cellophane dependency, Om Next has server-side rendering support now (which
+means that Compassus requires Om Next 1.0.0-alpha45 or later starting this version).
+
 ## [0.2.1](https://github.com/anmonteiro/compassus/compare/0.2.0...0.2.1) (2016-07-11)
 
 ### Bug fixes
