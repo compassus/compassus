@@ -361,8 +361,6 @@
                                   :borderLeftStyle "solid"}}
           (factory props))))))
 
-(def idents-wrapper (om/factory Wrapper))
-
 (defonce idents-app-state
   {:item/list [{:id 0 :name "Item 0"}
                {:id 1 :name "Item 1"}
@@ -371,7 +369,7 @@
 (def idents-app
   (c/application {:routes {:items (c/index-route ItemList)
                            [:item/by-id 0] Item}
-                  :mixins [(c/wrap-render idents-wrapper)]
+                  :mixins [(c/wrap-render Wrapper)]
                   :reconciler-opts {:state idents-app-state
                                     :parser (om/parser {:read idents-read})}}))
 
@@ -387,3 +385,84 @@
   (dom-node
     (fn [_ node]
       (c/mount! idents-app node))))
+
+;; =============================================================================
+;; Example with an `IQuery` wrapper
+
+(defui IQueryWrapper
+  static om/IQuery
+  (query [this]
+    [:current-user])
+  Object
+  (render [this]
+    (let [{:keys [current-user]} (om/props this)
+          {:keys [owner factory props]} (om/get-computed this)
+          route (c/current-route owner)]
+      (dom/div #js {:style #js {:margin "0 auto"
+                                :height 250
+                                :width 500
+                                :backgroundColor "oldlace"}}
+        (dom/div #js {:style #js {:minWidth "100%"
+                                  :minHeight "48px"
+                                  :lineHeight "48px"
+                                  :verticalAlign "middle"
+                                  :borderBottomWidth "2px"
+                                  :borderBottomStyle "solid"}}
+          (dom/h2 #js {:style #js {:margin 0
+                                   :textAlign "center"
+                                   :lineHeight "48px"}}
+            "Om Next Routing"))
+        (dom/div #js {:style #js {:display "inline-block"
+                                  :width "25%"
+                                  :minHeight "80%"
+                                  :verticalAlign "top"
+                                  :backgroundColor "gainsboro"}}
+          (dom/ul nil
+            (dom/li #js {:style #js {:marginTop "20px"}}
+              (dom/a #js {:href "#"
+                          :style (when (= route :app/home)
+                                   #js {:color "black"
+                                        :cursor "text"})
+                          :onClick #(change-route this :app/home %)}
+                "Home"))
+            (dom/li #js {:style #js {:marginTop "5px"}}
+              (dom/a #js {:href "#"
+                          :style (when (= route :app/about)
+                                   #js {:color "black"
+                                        :cursor "text"})
+                          :onClick #(change-route this :app/about %)}
+                "About")))
+          (dom/p #js {:style #js {:textAlign "center"
+                                  :textDecoration "underline"
+                                  :marginBottom "5px"
+                                  :marginTop "30px"
+                                  :fontWeight "bold"}}
+            "Current route:")
+          (dom/p #js {:style #js {:textAlign "center"
+                                  :margin 0
+                                  :color "red"}}
+            (str (pr-str route))))
+        (dom/div #js {:style #js {:display "inline-block"
+                                  :width "70%"
+                                  :minHeight "70%"
+                                  :verticalAlign "top"
+                                  :padding "12.5px 12.5px 12.5px 10.5px"
+                                  :borderLeftWidth "2px"
+                                  :borderLeftStyle "solid"}}
+          (dom/p #js {:style #js {:textAlign "right"}}
+            (str "Current-user: " current-user))
+          (factory props))))))
+
+(def iquery-wrapper-app
+  (c/application {:routes {:app/home (c/index-route Home)
+                           :app/about About}
+                  :mixins [(c/wrap-render IQueryWrapper)]
+                  :reconciler-opts {:state (atom (merge app-state
+                                                   {:current-user "Bob"}))
+                                    :parser (om/parser {:read read})}}))
+
+(defcard IQuery-wrapper-example
+  "An example with an `IQuery` wrapper. `:current-user` is data common to all routes"
+  (dom-node
+    (fn [_ node]
+      (c/mount! iquery-wrapper-app node))))

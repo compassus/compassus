@@ -128,25 +128,41 @@ The configuration map you pass to `compassus.core/application` can also contain 
 optional `:mixins` key. Its value should be a vector of mixins. Mixins hook into
 the generated Compassus root component's functionality in order to extend its capabilities
 or change its behavior. Currently, mixins can hook into the following component
-constructs / lifecycle parts: `:query`, `:params` and `render`. The currently built-in
-mixins (mixin constructors) are:
+constructs / lifecycle parts: `render`. The currently built-in mixins (mixin constructors)
+are:
 
-- **`compassus.core/wrap-render`**: constructs a mixin that will wrap all the routes
-in the application. It becomes useful to specify this mixin whenever you want to
-define common presentation logic for all the routes in an application. `wrap-render`
-takes a function or an Om Next component factory, which will be passed a map with
-the following keys (props in the case of a component factory):
+##### **`compassus.core/wrap-render`**:
+
+constructs a mixin that will wrap all the routes in the application. It becomes
+useful to specify this mixin whenever you want to define common presentation logic
+for all the routes in your Compassus application. `wrap-render` takes a function
+or an Om Next component **class**. The component class may or may not implement
+`om.next/IQuery` — a query that refers to data that you want to have available to
+the wrapper, e.g. the current logged in user and such.
+
+The wrapper will be passed a map with the keys below. If the wrapper is a simple
+function, the map will be passed as argument. If it is a component class, the map
+will be in the component's props (accessible through `om.next/props`). If the wrapper
+implements `om.next/IQuery`, its props will be the data that the query asks for.
+You'll find the map with the keys below in the component's computed props, accessible
+through `om.next/get-computed`.
 
   - :owner   - the parent component instance
   - :factory - the component factory for the current route
   - :props   - the props for the current route.
 
+*Note*: There is only supposed to be one `wrap-render` mixin under the `:mixins`
+key. If there are more than one, Compassus will only use the first.
+
 Example:
 
 ``` clojure
+;; Wrapper that doesn't implement `om.next/IQuery`
 (defui Wrapper
   Object
   (render [this]
+    ;; the wrapper doesn't implement `om.next/IQuery`, so the map is accessible
+    ;; through `om.next/props`:
     (let [{:keys [owner factory props]} (om/props this)]
       ;; implement common presentation logic for all routes
       ;; call the given factory with props in the end
@@ -159,36 +175,23 @@ Example:
     {:routes ...
      :reconciler-opts ...
      :mixins [(compassus/wrap-render wrapper)]}))
-```
-
-- **`compassus.core/query`**: builds a mixin that will add its parameter (a query)
-to the root application's query. Useful to query for data that is to be used e.g.
-in the `wrap-render` mixin.
-
-- **`compassus.core/params`**: builds a mixin that will add its parameter (query params)
-to the root application's query params. Similar to the `query` mixin, but for `om.next/IQueryParams`.
-
-Example:
 
 
-``` clojure
+;; Example of a wrapper that implements `om.next/IQuery`
 (defui Wrapper
+  static om/IQuery
+  (query [this]
+    [:current-user])
   Object
   (render [this]
-    (let [{:keys [owner factory props]} (om/props this)
-          {:keys [app-title current-user]} (::compassus/mixin-data props)]
+    ;; `:current-user` will be in props, the other keys will be in computed props:
+    (let [{:keys [current-user]} (om/props this)
+          {:keys [owner factory props]} (om/get-computed this)]
       (dom/div nil
-        (dom/h1 nil app-title)
-        (dom/h3 nil (str "Current user: " current-user))
+        ;; implement common presentation logic for all routes
+        (dom/p nil (str "Current logged in user: " current-user))
+        ;; call the given factory with props in the end
         (factory props)))))
-
-(def wrapper (om/factory Wrapper))
-
-(def app
-  (compassus/application
-    {:routes ...
-     :reconciler-opts ...
-     :mixins [(compassus/wrap-render wrapper) (compassus/query [:app-title :current-user])]}))
 ```
 
 **A note on mixins**
@@ -202,7 +205,7 @@ component's query could also be done as shown below:
   (compassus/application
     {:routes ...
      :reconciler-opts ...
-     :mixins [{:query [:app-title :current-user]}]}))
+     :mixins [{:render MyWrapper}]}))
 ```
 
 #### Utility functions

@@ -5,7 +5,7 @@
                 :clj  [[cellophane.next :as om :refer [ui]]])
             [om.util :as util]
             [om.next.impl.parser :as parser]
-            [compassus.util :refer [collect]]))
+            [compassus.util :refer [collect collect-1]]))
 
 (defn get-reconciler
   "Returns the Om Next reconciler for the given Compassus application."
@@ -17,6 +17,10 @@
   [app]
   (-> app :config :root-class))
 
+(defn- om-class? [x]
+  #?(:clj  (boolean (some-> x meta :component))
+     :cljs (boolean (.. x -prototype -om$isComponent))))
+
 (defn- make-root-class
   [{:keys [routes mixins history]}]
   (let [route->query (into {}
@@ -27,19 +31,14 @@
         route->factory (zipmap (keys routes)
                                (map om/factory (vals routes)))
         {:keys [setup teardown]} history
-        wrap-render (reduce #(%2 %1)
-                      (fn [{:keys [factory props]}]
-                        (factory props))
-                      (collect :render mixins))
-        query-mixin (reduce into [] (collect :query mixins))
+        wrapper-class (collect-1 :render mixins)
+        wrapper (when-not (nil? wrapper-class)
+                  (cond-> wrapper-class
+                    (om-class? wrapper-class) om/factory))
         query (cond-> [::route {::route-data route->query}]
-                (not (empty? query-mixin))
-                (conj {::mixin-data query-mixin}))
-        params (reduce merge (collect :params mixins))]
+                (om/iquery? wrapper-class)
+                (conj {::mixin-data (om/get-query wrapper-class)}))]
     (ui
-      static om/IQueryParams
-      (params [this]
-        params)
       static om/IQuery
       (query [this]
         query)
@@ -51,13 +50,16 @@
         (when teardown
           (teardown)))
       (render [this]
-        (let [props (om/props this)
-              route (::route props)
-              route-data (::route-data props)
-              factory (get route->factory route)]
-          (wrap-render {:owner   this
-                        :factory factory
-                        :props   route-data}))))))
+        (let [{:keys [::route ::route-data ::mixin-data] :as props} (om/props this)
+              factory (get route->factory route)
+              route-component (factory route-data)]
+          (if-not (nil? wrapper)
+            (let [props (cond->> {:owner   this
+                                 :factory (fn [_] route-component)
+                                 :props   route-data}
+                          (om/iquery? wrapper-class) (om/computed mixin-data))]
+              (wrapper props))
+            route-component))))))
 
 (defrecord ^:private CompassusApplication [config state])
 
@@ -278,9 +280,10 @@
                            :cljs (satisfies? IAtom state)))
         route-info {::route index-route}
         state (if normalize?
-                (let [query-mixin (reduce into [] (collect :query mixins))
-                      merged-query (transduce (map om/get-query)
-                                     (completing into) query-mixin (vals route->component))]
+                (let [merged-query (transduce (map om/get-query)
+                                     (completing into)
+                                     (or (om/get-query (collect-1 :render mixins)) [])
+                                     (vals route->component))]
                   (atom (merge (om/tree->db merged-query state true)
                                route-info)))
                 (doto state
@@ -378,14 +381,4 @@
 ;; Mixins
 
 (defn wrap-render [wrapper]
-  {:render (fn [render-fn]
-             (fn [opts]
-               (wrapper (assoc opts :factory
-                          (fn [_]
-                            (render-fn opts))))))})
-
-(defn query [query]
-  {:query query})
-
-(defn params [params]
-  {:params params})
+  {:render wrapper})

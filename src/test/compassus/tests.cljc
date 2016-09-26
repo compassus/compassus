@@ -1,13 +1,15 @@
 (ns compassus.tests
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go]]))
   (:require #?@(:cljs [[cljs.test :refer-macros [deftest testing is are use-fixtures async]]
-                       [om.next :as om :refer-macros [defui]]
+                       [om.next :as om :refer-macros [defui ui]]
                        [cljsjs.react]
-                       [cljs.core.async :refer [<! close! chan take!]]]
+                       [cljs.core.async :refer [<! close! chan take!]]
+                       [goog.object :as gobj]]
                 :clj  [[clojure.test :refer [deftest testing is are use-fixtures]]
                        [clojure.core.async :refer [go <! close! chan <!!]]
-                       [cellophane.next :as om :refer [defui]]
+                       [cellophane.next :as om :refer [defui ui]]
                        [cellophane.protocols :as p]])
+            [om.next.protocols :as om-p]
             [compassus.core :as c]))
 
 (def test-utils #?(:cljs js/React.addons.TestUtils))
@@ -638,67 +640,72 @@
 (deftest test-mixins
   (testing "wrapper mixin"
     (let [update-atom (atom {})
-          wrapper-1 (fn [{:keys [owner factory render props]}]
-                      (swap! update-atom update-in [:wrapped-render] (fnil conj []) 1)
-                      (factory props))
-          wrapper-2 (fn [{:keys [owner factory render props]}]
-                      (swap! update-atom update-in [:wrapped-render] (fnil conj []) 2)
-                      (factory props))
+          wrapper (fn [{:keys [owner factory render props]}]
+                    (swap! update-atom assoc :wrapped-render true
+                      :props props)
+                    (factory props))
           #?@(:cljs [shallow-renderer (.createRenderer test-utils)])
           app (c/application {:routes {:index (c/index-route Home)}
-                              :mixins [(c/wrap-render wrapper-1) (c/wrap-render wrapper-2)]
+                              :mixins [(c/wrap-render wrapper)]
                               :reconciler-opts
                               {:state (atom init-state)
                                :parser (om/parser {:read app-read})
+                               :root-unmount (fn [_])
                                #?@(:cljs [:root-render (fn [c target]
                                                          (.render shallow-renderer c))])}})
           c (c/mount! app :target)]
       #?(:clj (p/-render c))
-      ;; each wraps the next
-      (is (= (-> @update-atom :wrapped-render) [2 1]))))
-  (testing "query mixin"
-    (let [app (c/application {:routes {:index (c/index-route Home)}
-                              :mixins [(c/query [:current-user]) (c/query [{:foo [:bar :baz]}])]
-                              :reconciler-opts
-                              {:state (atom (merge init-state
-                                              {:current-user "Bob"
-                                               :foo {:bar 42 :baz 43}}))
-                               :parser (om/parser {:read mixins-read})}})
-          r (c/get-reconciler app)
-          p (-> r :config :parser)]
-      (is (= (om/get-query (c/root-class app))
-             [::c/route
-              {::c/route-data {:index [:home/title :home/content]}}
-              {::c/mixin-data [:current-user {:foo [:bar :baz]}]}]))
-      (is (= (p (#'om/to-env r) (om/get-query (c/root-class app)))
-             {::c/route :index
-              ::c/route-data (select-keys init-state (om/get-query Home))
-              ::c/mixin-data (select-keys @r [:current-user :foo])}))))
-  (testing "params mixin"
-    (let [app (c/application {:routes {:index (c/index-route Home)}
-                              :mixins [(c/query '[{:foo ?foo}]) (c/params {:foo [:bar :baz]})]
-                              :reconciler-opts
-                              {:state (atom (merge init-state
-                                              {:foo {:bar 42 :baz 43}}))
-                               :parser (om/parser {:read mixins-read})}})
-          r (c/get-reconciler app)
-          p (-> r :config :parser)
-          root (c/root-class app)]
-      (is (= (om/params (c/root-class app))
-             {:foo [:bar :baz]}))
-      (is (= #?(:clj  ((-> root meta :query) root)
-                :cljs (om/query root))
-             [::c/route
-              {::c/route-data {:index [:home/title :home/content]}}
-              {::c/mixin-data [{:foo '?foo}]}]))
-      (is (= (om/get-query root)
-             [::c/route
-              {::c/route-data {:index [:home/title :home/content]}}
-              {::c/mixin-data [{:foo [:bar :baz]}]}]))
-      (is (= (p (#'om/to-env r) (om/get-query root))
-             {::c/route :index
-              ::c/route-data (select-keys init-state (om/get-query Home))
-              ::c/mixin-data (select-keys @r [:foo])})))))
+      (is (= (:props @update-atom) (select-keys init-state (om/get-query Home))))
+      (is (true? (-> @update-atom :wrapped-render)))
+      (om/remove-root! (c/get-reconciler app) :target)))
+  (testing "wrapper's parent is the root class"
+    (let [parent-atom (atom {})
+          wrapper (ui
+                    Object
+                    (render [this]
+                      (let [{:keys [owner factory render props]} (om/props this)]
+                        (factory props))))]
+      (with-redefs [om/factory (fn [class]
+                                 (fn self
+                                   ([] (self nil))
+                                   ([props & children]
+                                    (swap! parent-atom assoc class @#'om/*parent*)
+                                    (let [t (if-not (nil? @#'om/*reconciler*)
+                                              (om-p/basis-t @#'om/*reconciler*)
+                                              0)]
+                                      #?(:clj  (class nil nil
+                                                 {:omcljs$value      props
+                                                  :omcljs$mounted?   (atom false)
+                                                  :omcljs$reconciler @#'om/*reconciler*
+                                                  :omcljs$parent     @#'om/*parent*
+                                                  :omcljs$depth      @#'om/*depth*
+                                                  ;; TODO: remove once we upgrade to Om alpha46
+                                                  :cellophaneclj$reconciler @#'om/*reconciler*
+                                                  :cellophaneclj$parent     @#'om/*parent*
+                                                  :cellophaneclj$value      props
+                                                  :cellophaneclj$mounted?   (atom false)
+                                                  :cellophaneclj$depth      @#'om/*depth*}
+                                                 nil)
+                                         :cljs (js/React.createElement class
+                                                 #js {:omcljs$value      (om/om-props props t)
+                                                      :omcljs$reconciler om/*reconciler*
+                                                      :omcljs$parent     om/*parent*
+                                                      :omcljs$depth      om/*depth*}))))))]
+        (let [#?@(:cljs [shallow-renderer (.createRenderer test-utils)])
+              app (c/application {:routes {:index (c/index-route Home)}
+                                  :mixins [(c/wrap-render wrapper)]
+                                  :reconciler-opts
+                                  {:state (atom init-state)
+                                   :parser (om/parser {:read app-read})
+                                   :root-unmount (fn [_])
+                                   #?@(:cljs [:root-render (fn [c target]
+                                                             (.render shallow-renderer c))])}})
+              root (c/root-class app)
+              c (c/mount! app :target)]
+          #?(:clj (p/-render c))
+          (is (= (-> @parent-atom (get wrapper) om/react-type) root))
+          (is (= (-> @parent-atom (get Home) om/react-type) root))
+          (om/remove-root! (c/get-reconciler app) :target))))))
 
 (defmulti remote-mixins-read om/dispatch)
 
@@ -710,18 +717,59 @@
   [{:keys [query target]} _ _]
   {target true})
 
-(deftest test-remote-mixins
-  (let [app (c/application
-              {:routes {:index (c/index-route Home)}
-               :mixins [(c/query '[{:foo ?foo}]) (c/params {:foo [:bar :baz]})]
-               :reconciler-opts
-               {:state  (atom {})
-                :parser (om/parser {:read remote-mixins-read})
-                :remotes [:some-remote]}})
-        r (c/get-reconciler app)]
-    (is (= (om/gather-sends (#'om/to-env r)
-             (om/get-query (c/root-class app)) [:some-remote])
-           {:some-remote [{:foo [:bar :baz]}]}))))
+(def update-atom (atom {}))
+
+(defui RenderWrapper
+  static om/IQueryParams
+  (params [this]
+    {:foo [:bar :baz]})
+  static om/IQuery
+  (query [this]
+    '[{:foo ?foo}])
+  Object
+  (render [this]
+    (let [{:keys [props owner factory]} (om/props this)]
+      (swap! update-atom :assoc :props (om/props this))
+      (factory props))))
+
+(deftest test-iquery-wrapper
+  (testing "remote behavior"
+    (let [app (c/application
+                {:routes {:index (c/index-route Home)}
+                 :mixins [(c/wrap-render RenderWrapper)]
+                 :reconciler-opts
+                 {:state  (atom {})
+                  :parser (om/parser {:read remote-mixins-read})
+                  :remotes [:some-remote]}})
+          r (c/get-reconciler app)
+          root (c/root-class app)]
+      (is (= (om/get-query root)
+            [::c/route
+             {::c/route-data {:index [:home/title :home/content]}}
+             {::c/mixin-data [{:foo [:bar :baz]}]}]))
+      (is (= (om/gather-sends (#'om/to-env r)
+               (om/get-query root) [:some-remote])
+            {:some-remote [{:foo [:bar :baz]}]}))))
+  (testing "wrapper updates"
+    (reset! update-atom {})
+    (let [#?@(:cljs [shallow-renderer (.createRenderer test-utils)])
+          app (c/application
+                {:routes {:index (c/index-route Home)}
+                 :mixins [(c/wrap-render RenderWrapper)]
+                 :reconciler-opts
+                 {:state  (atom init-state)
+                  :parser (om/parser {:read remote-mixins-read})
+                  #?@(:cljs [:root-render (fn [c target]
+                                            (.render shallow-renderer c))])}})
+          r (c/get-reconciler app)
+          root (c/root-class app)
+          c (c/mount! app :target)
+          #?@(:clj [wrapper (p/-render c)])
+          wrapper-props #?(:clj  (:cellophaneclj$value (p/-props wrapper))
+                           :cljs (-> (.getRenderOutput shallow-renderer)
+                                   (gobj/get "props") om/get-props om/unwrap))]
+      (is (every? (partial contains? (om/get-computed wrapper-props)) [:owner :factory :props]))
+      )))
 
 (defui MixinPostList
   static om/IQuery
@@ -735,7 +783,7 @@
 
 (deftest test-app-normalizes-mixin-queries
   (let [app (c/application {:routes {:posts MixinPostList}
-                            :mixins [(c/query [{:posts/list (om/get-query Post)}])]
+                            :mixins [(c/wrap-render PostList)]
                             :reconciler-opts {:state posts-init-state
                                               :parser (om/parser {:read mixin-posts-read})}})
         r (c/get-reconciler app)
