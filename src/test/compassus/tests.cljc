@@ -715,7 +715,8 @@
 
 (defmethod remote-mixins-read :foo
   [{:keys [query target]} _ _]
-  {target true})
+  {:value {:bar 42}
+   target true})
 
 (def update-atom (atom {}))
 
@@ -769,7 +770,7 @@
                            :cljs (-> (.getRenderOutput shallow-renderer)
                                    (gobj/get "props") om/get-props om/unwrap))]
       (is (every? (partial contains? (om/get-computed wrapper-props)) [:owner :factory :props]))
-      )))
+      (is (= (-> wrapper-props :foo) {:bar 42})))))
 
 (defui MixinPostList
   static om/IQuery
