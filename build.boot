@@ -33,7 +33,7 @@
  '[adzerk.boot-cljs-repl :as cr :refer [cljs-repl start-repl]]
  '[adzerk.boot-reload    :refer [reload]]
  '[adzerk.boot-test :as bt-clj]
- '[adzerk.bootlaces      :refer [bootlaces! push-release]]
+ '[adzerk.bootlaces      :refer [bootlaces! push-release push-snapshot]]
  '[clojure.tools.namespace.repl :as repl]
  '[crisptrutski.boot-cljs-test :as bt-cljs]
  '[pandeiro.boot-http :refer [serve]]
