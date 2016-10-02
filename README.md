@@ -22,6 +22,8 @@ Read the [announcement blog post](https://anmonteiro.com/2016/06/the-quest-for-a
 
 ## Installation
 
+### Stable
+
 Leiningen dependency information:
 
 ```clojure
@@ -36,6 +38,13 @@ Maven dependency information:
   <artifactId>compassus</artifactId>
   <version>0.2.1</version>
 </dependency>
+```
+
+### Pre-release
+
+Grab a pre-release version of the latest features by depending on the following:
+```clojure
+[compassus "0.3.0-SNAPSHOT"]
 ```
 
 ## Guide
