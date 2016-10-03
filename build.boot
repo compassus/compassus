@@ -11,9 +11,9 @@
                  [cljsjs/react-with-addons    "15.3.1-0"       :scope "test"]
                  [cljsjs/react-dom            "15.3.1-0"       :scope "test"
                   :exclusions [cljsjs/react]]
-                 [com.cognitect/transit-clj   "0.8.288"        :scope "test"]
+                 [com.cognitect/transit-clj   "0.8.290"        :scope "test"]
                  [org.clojure/core.async      "0.2.391"        :scope "test"]
-                 [devcards                    "0.2.1-7"        :scope "test"
+                 [devcards                    "0.2.2"          :scope "test"
                   :exclusions [cljsjs/react cljsjs/react-dom]]
                  [com.cemerick/piggieback     "0.2.1"          :scope "test"]
                  [pandeiro/boot-http          "0.7.3"          :scope "test"]
@@ -73,7 +73,7 @@
           :compiler-options {:devcards true
                              :parallel-build true}
           :ids #{"js/devcards"})
-    (target :dir #{"target"})))
+    (target)))
 
 (deftask testing []
   (set-env! :source-paths #(conj % "src/test"))
