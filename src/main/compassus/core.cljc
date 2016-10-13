@@ -22,7 +22,7 @@
      :cljs (boolean (.. x -prototype -om$isComponent))))
 
 (defn- make-root-class
-  [{:keys [routes mixins history]}]
+  [{:keys [routes mixins]}]
   (let [route->query (into {}
                        (map (fn [[route class]]
                               (when (om/iquery? class)
@@ -30,7 +30,9 @@
                        routes)
         route->factory (zipmap (keys routes)
                                (map om/factory (vals routes)))
-        {:keys [setup teardown]} history
+        will-mount (collect :will-mount mixins)
+        did-mount (collect :did-mount mixins)
+        will-unmount (collect :will-unmount mixins)
         wrapper-class (collect-1 :render mixins)
         wrapper (when-not (nil? wrapper-class)
                   (cond-> wrapper-class
@@ -43,12 +45,15 @@
       (query [this]
         query)
       Object
+      (componentWillMount [this]
+        (doseq [f will-mount]
+          (f this)))
       (componentDidMount [this]
-        (when setup
-          (setup)))
+        (doseq [f did-mount]
+          (f this)))
       (componentWillUnmount [this]
-        (when teardown
-          (teardown)))
+        (doseq [f will-unmount]
+          (f this)))
       (render [this]
         (let [{:keys [::route ::route-data ::mixin-data] :as props} (om/props this)
               factory (get route->factory route)
@@ -317,38 +322,17 @@
 
      :mixins          - a vector of mixins that hook into the generated Compassus
                         root component's functionality in order to extend its
-                        capabilities or change its behavior. Currently, mixins can
-                        hook into the following component constructs / lifecycle:
-                        `:query`, `:params` and `render`. The currently built-in
-                        mixins (mixin constructors) are:
+                        capabilities or change its behavior. The currently built-in
+                        mixin constructors are:
 
-                        `compassus.core/wrap-render`:
+                          - `compassus.core/wrap-render`
+                          - `compassus.core/will-mount`
+                          - `compassus.core/did-mount`
+                          - `compassus.core/will-unmount`
 
-                          - constructs a mixin that will wrap all the routes in
-                          the application. Useful for applications that have a
-                          common layout for every route.
-
-                          Takes a function or an Om Next component factory, which
-                          will be passed a map with the following keys (props in
-                          the case of a component factory):
-
-                            :owner   - the parent component instance
-
-                            :factory - the component factory for the current route
-
-                            :props   - the props for the current route.
-
-                          Example: (compassus.core/wrap-render
-                                     (fn [{:keys [owner factory props]}]
-                                       (dom/div nil
-                                         (dom/h1 nil \"App title\")
-                                         (factory props))))
-
-     :history         - a map with keys `:setup` and `:teardown`. Values should
-                        be functions of no arguments that will be called when the
-                        application mounts and unmounts, respectively. Used to
-                        set up / teardown browser history listeners.
-   "
+                          Refer to the specific documentation of those functions
+                          for more information.
+  "
   [{:keys [routes mixins reconciler-opts] :as opts}]
   (let [index-route (find-index-route routes)
         route->component (normalize-routes routes index-route)
@@ -368,5 +352,64 @@
 ;; =============================================================================
 ;; Mixins
 
-(defn wrap-render [wrapper]
+(defn wrap-render
+  "Constructs a mixin that will wrap all the routes in the application. Useful
+   for applications that have a common layout for every route.
+
+   Takes a function or an Om Next component factory, which will be passed a map
+   with the following keys (props in the case of a component factory):
+
+     :owner   - the parent component instance
+
+     :factory - the component factory for the current route
+
+     :props   - the props for the current route.
+
+   Example: (compassus.core/wrap-render
+              (fn [{:keys [owner factory props]}]
+                (dom/div nil
+                  (dom/h1 nil \"App title\")
+                  (factory props))))
+  "
+  [wrapper]
   {:render wrapper})
+
+(defn will-mount
+  "Constructs a mixin that will hook into the `componentWillMount` lifecycle
+   method of the generated root component. Takes a function which will receive
+   the component as argument. Useful to perform any setup before the Compassus
+   application mounts.
+
+   Example: (compassus.core/will-mount
+              (fn [self]
+                ;; sets a property in the state of the root component
+                (om/set-state! self {:foo 42})))
+  "
+  [f]
+  {:will-mount f})
+
+(defn did-mount
+  "Constructs a mixin that will hook into the `componentDidMount` lifecycle
+   method of the generated root component. Takes a function which will receive
+   the component as argument. Useful to perform any setup after the Compassus
+   application mounts.
+
+   Example: (compassus.core/did-mount
+              (fn [self]
+                (start-analytics!)))
+  "
+  [f]
+  {:did-mount f})
+
+(defn will-unmount
+  "Constructs a mixin that will hook into the `componentWillUnmount` lifecycle
+   method of the generated root component. Takes a function which will receive
+   the component as argument. Useful to perform any cleanup after the Compassus
+   application unmounts.
+
+   Example: (compassus.core/will-unmount
+              (fn [self]
+                (stop-analytics!)))
+  "
+  [f]
+  {:will-unmount f})

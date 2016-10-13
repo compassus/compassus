@@ -9,6 +9,10 @@
 - Add mixins support. Read more about mixins [here](https://github.com/compassus/compassus/blob/master/README.md#mixins).
 - **BREAKING**: removed the `:wrapper` option from the `compassus.core/application`
 configuration map. Use the `compassus.core/wrap-render` mixin instead.
+- Added new built-in mixins: `will-mount`, `did-mount` and `will-unmount`, which
+hook into the respective lifecycle methods of the generated root component.
+- **BREAKING**: removed the `:history` option from the `compassus.core/application`
+configuration map. Use the new component lifecycle mixins instead.
 
 ### Changes
 

@@ -137,13 +137,11 @@ For convenience, the parser's `env` argument contains a `:route` key with the cu
 The configuration map you pass to `compassus.core/application` can also contain an
 optional `:mixins` key. Its value should be a vector of mixins. Mixins hook into
 the generated Compassus root component's functionality in order to extend its capabilities
-or change its behavior. Currently, mixins can hook into the following component
-constructs / lifecycle parts: `render`. The currently built-in mixins (mixin constructors)
-are:
+or change its behavior. The currently built-in mixin constructors are:
 
 ##### **`compassus.core/wrap-render`**:
 
-constructs a mixin that will wrap all the routes in the application. It becomes
+Constructs a mixin that will wrap all the routes in the application. It becomes
 useful to specify this mixin whenever you want to define common presentation logic
 for all the routes in your Compassus application. `wrap-render` takes a function
 or an Om Next component **class**. The component class may or may not implement
@@ -162,7 +160,7 @@ through `om.next/get-computed`.
   - :props   - the props for the current route.
 
 *Note*: There is only supposed to be one `wrap-render` mixin under the `:mixins`
-key. If there are more than one, Compassus will only use the first.
+key. If there are more than one, Compassus will only use the first it finds.
 
 Example:
 
@@ -202,6 +200,49 @@ Example:
         (dom/p nil (str "Current logged in user: " current-user))
         ;; call the given factory with props in the end
         (factory props)))))
+```
+
+##### **`compassus.core/will-mount`**:
+
+Constructs a mixin that will hook into the `componentWillMount` lifecycle method
+of the generated root component. Takes a function which will receive the component
+as argument. Useful to perform any setup before the Compassus application mounts.
+
+Example:
+
+``` clojure
+(compassus.core/will-mount
+  (fn [self]
+    ;; sets a property in the state of the root component
+    (om/set-state! self {:foo 42})))
+```
+
+##### **`compassus.core/did-mount`**:
+
+Constructs a mixin that will hook into the `componentDidMount` lifecycle method
+of the generated root component. Takes a function which will receive the component
+as argument. Useful to perform any setup after the Compassus application mounts.
+
+Example:
+
+```clojure`
+(compassus.core/did-mount
+  (fn [self]
+    (start-analytics!)))
+ ```
+
+##### **`compassus.core/will-unmount`**:
+
+Constructs a mixin that will hook into the `componentWillUnmount` lifecycle method
+of the generated root component. Takes a function which will receive the component
+as argument. Useful to perform any cleanup after the Compassus application unmounts.
+
+Example:
+
+``` clojure
+(compassus.core/will-unmount
+  (fn [self]
+    (stop-analytics!)))
 ```
 
 **A note on mixins**
@@ -319,13 +360,16 @@ Examples:
 
 ### Integrating with browser history
 
-URL (or path) navigation is an orthogonal concern to routing in Om Next components, which is mainly about swapping components in and out according to the selected route. However, it might be desirable for applications to setup history navigation only when the application mounts. In addition, applications might also want to teardown history if the application unmounts from the DOM. Thus, the configuration map passed to `compassus.core/application` also accepts a `:history` key which should contain a map with the following keys:
+URL (or path) navigation is an orthogonal concern to routing in Om Next components,
+which is mainly about swapping components in and out according to the selected route.
+However, it might be desirable for applications to setup history navigation only
+when the application mounts. In addition, applications might also want to teardown
+history if the application unmounts from the DOM. This can easily be achieved in
+Compassus through the use of the `did-mount` and the `will-unmount` mixins.
 
-- `:setup` - a function of no arguments that will be called when the application mounts in the DOM.
-
-- `:teardown` - optional. a function of no arguments that will be called when the application unmounts from the DOM.
-
-Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and [Pushy](https://github.com/kibu-australia/pushy), and another using [Secretary](https://github.com/gf3/secretary) and [`goog.History`](http://google.github.io/closure-library/api/class_goog_History.html).
+Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and
+[Pushy](https://github.com/kibu-australia/pushy), and another using
+[Secretary](https://github.com/gf3/secretary) and [`goog.History`](http://google.github.io/closure-library/api/class_goog_History.html).
 
 #### Bidi + Pushy example
 
@@ -350,8 +394,10 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and [Push
   (compassus/application
     {:routes  {:index (compassus/index-route Index)
                :about About}
-     :history {:setup    #(pushy/start! history)
-               :teardown #(pushy/stop! history)}}))
+     :mixins [(compassus/did-mount (fn [_]
+                                     (pushy/start! history)))
+              (compassus/will-unmount (fn [_]
+                                        (pushy/stop! history)))]}))
 ```
 
 #### Secretary + `goog.History` example
@@ -381,11 +427,13 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and [Push
   (compassus/application
     {:routes  {:index (compassus/index-route Index)
                :about About}
-     :history {:setup (fn []
-                        (reset! event-key
-                          (evt/listen history EventType/NAVIGATE #(secretary/dispatch! (.-token %))))
-                        (.setEnabled history true))
-               :teardown #(evt/unlistenByKey @event-key)}}))
+     :mixins [(compassus/did-mount (fn [_]
+                                     (reset! event-key
+                                       (evt/listen history EventType/NAVIGATE
+                                         #(secretary/dispatch! (.-token %))))
+                                     (.setEnabled history true)))
+              (compassus/will-unmount (fn [_]
+                                        (evt/unlistenByKey @event-key)))]}))
 ```
 
 ## Documentation

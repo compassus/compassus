@@ -695,7 +695,39 @@
           #?(:clj (p/-render c))
           (is (= (-> @parent-atom (get wrapper) om/react-type) root))
           (is (= (-> @parent-atom (get Home) om/react-type) root))
-          (om/remove-root! (c/get-reconciler app) :target))))))
+          (om/remove-root! (c/get-reconciler app) :target)))))
+  (testing "lifecycle mixins"
+    (let [update-atom (atom {})
+          #?@(:cljs [shallow-renderer (.createRenderer test-utils)])
+          app (c/application {:routes {:index (c/index-route Home)}
+                              :mixins [(c/will-mount
+                                         (fn [this]
+                                           (swap! update-atom update-in
+                                             [:will-mount] (fnil inc 0))))
+                                       (c/did-mount
+                                         (fn [this]
+                                           (swap! update-atom update-in
+                                             [:did-mount] (fnil inc 0))))
+                                       (c/will-unmount
+                                         (fn [this]
+                                           (swap! update-atom update-in
+                                             [:will-unmount] (fnil inc 0))))]
+                              :reconciler-opts
+                              {:state (atom {})
+                               :parser (om/parser {:read (fn [_ _ _]
+                                                           {:value {}})})
+                               :root-unmount (fn [_]
+                                               #?(:cljs (.unmount shallow-renderer)))
+                               #?@(:cljs [:root-render (fn [c target]
+                                                         (.render shallow-renderer c))])}})
+          c (c/mount! app :target)]
+      #?(:clj (p/-render c))
+      ;; ;; https://github.com/facebook/react/commit/941997
+      #?(:cljs (.componentDidMount (.getMountedInstance shallow-renderer)))
+      (is (= (-> @update-atom :will-mount) 1))
+      (is (= (-> @update-atom :did-mount) 1))
+      (om/remove-root! (c/get-reconciler app) :target)
+      (is (= (-> @update-atom :will-unmount) 1)))))
 
 (defmulti remote-mixins-read om/dispatch)
 
