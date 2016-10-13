@@ -722,12 +722,13 @@
                                                          (.render shallow-renderer c))])}})
           c (c/mount! app :target)]
       #?(:clj (p/-render c))
-      ;; ;; https://github.com/facebook/react/commit/941997
-      #?(:cljs (.componentDidMount (.getMountedInstance shallow-renderer)))
       (is (= (-> @update-atom :will-mount) 1))
-      (is (= (-> @update-atom :did-mount) 1))
+      ;; CLJS-only: server-side doesn't have these lifecycle methods
+      ;; https://github.com/facebook/react/commit/941997
+      #?(:cljs (.componentDidMount (.getMountedInstance shallow-renderer)))
+      #?(:cljs (is (= (-> @update-atom :did-mount) 1)))
       (om/remove-root! (c/get-reconciler app) :target)
-      (is (= (-> @update-atom :will-unmount) 1)))))
+      #?(:cljs (is (= (-> @update-atom :will-unmount) 1))))))
 
 (defmulti remote-mixins-read om/dispatch)
 
