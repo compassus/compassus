@@ -344,18 +344,6 @@
                                          (dom/h1 nil \"App title\")
                                          (factory props))))
 
-                        `compassus.core/query`:
-
-                          - builds a mixin that will add its parameter (a query)
-                          to the root application's query. Useful to query for data
-                          that is to be used e.g. in the `wrap-render` mixin.
-
-                        `compassus.core/params`:
-
-                          - builds a mixin that will add its parameter (query params)
-                          to the root application's query params. Similar to the
-                          `query` mixin, but for `om.next/IQueryParams`.
-
      :history         - a map with keys `:setup` and `:teardown`. Values should
                         be functions of no arguments that will be called when the
                         application mounts and unmounts, respectively. Used to
