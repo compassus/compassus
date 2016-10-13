@@ -18,6 +18,7 @@ Read the [announcement blog post](https://anmonteiro.com/2016/06/the-quest-for-a
     - [Bidi + Pushy example](#bidi--pushy-example)
     - [Secretary + `goog.History` example](#secretary--googhistory-example)
 - [Documentation](#documentation)
+- [Companies using Compassus](#companies-using-compassus)
 - [Copyright & License](#copyright--license)
 
 ## Installation
@@ -392,6 +393,10 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and [Push
 There's API documentation [here](https://compassus.github.io/compassus/doc/0.2.1/).
 
 There are also some devcards examples [here](https://compassus.github.io/compassus/devcards/). Refer to their [source](./src/devcards/compassus/devcards/core.cljs) for more information.
+
+## Companies using Compassus
+
+- [CircleCI](https://circleci.com/), source [here](https://github.com/circleci/frontend)
 
 ## Copyright & License
 
