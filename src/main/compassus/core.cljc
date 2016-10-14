@@ -1,8 +1,9 @@
 (ns compassus.core
   #?(:clj (:refer-clojure :exclude [read]))
-  (:require #?(:cljs [goog.object :as gobj])
+  (:require #?@(:cljs [[goog.log]
+                       [goog.object :as gobj]])
             [om.next :as om #?(:clj  :refer
-                               :cljs :refer-macros) [ui]]
+                               :cljs :refer-macros) [ui invariant]]
             [om.util :as util]
             [om.next.impl.parser :as parser]
             [compassus.util :refer [collect collect-1]]))
@@ -57,6 +58,8 @@
       (render [this]
         (let [{:keys [::route ::route-data ::mixin-data] :as props} (om/props this)
               factory (get route->factory route)
+              _ (invariant (some? factory)
+                  (str "Trying to set route to " route " but one is not defined."))
               route-component (factory route-data)]
           (if-not (nil? wrapper)
             (let [props (cond->> {:owner   this
