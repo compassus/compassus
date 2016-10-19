@@ -4,29 +4,29 @@
  :source-paths    #{"src/main"}
  :resource-paths  #{"resources"}
  :dependencies '[[org.clojure/clojure         "1.9.0-alpha13"  :scope "provided"]
-                 [org.clojure/clojurescript   "1.9.229"        :scope "provided"]
-                 [org.omcljs/om               "1.0.0-alpha46"  :scope "provided"
+                 [org.clojure/clojurescript   "1.9.293"        :scope "provided"]
+                 [org.omcljs/om               "1.0.0-alpha47"  :scope "provided"
                   :exclusions [cljsjs/react]]
 
                  [cljsjs/react-with-addons    "15.3.1-0"       :scope "test"]
                  [cljsjs/react-dom            "15.3.1-0"       :scope "test"
                   :exclusions [cljsjs/react]]
                  [com.cognitect/transit-clj   "0.8.290"        :scope "test"]
-                 [org.clojure/core.async      "0.2.391"        :scope "test"]
+                 [org.clojure/core.async      "0.2.395"        :scope "test"]
                  [devcards                    "0.2.2"          :scope "test"
                   :exclusions [cljsjs/react cljsjs/react-dom]]
                  [com.cemerick/piggieback     "0.2.1"          :scope "test"]
                  [pandeiro/boot-http          "0.7.3"          :scope "test"]
-                 [adzerk/boot-cljs            "1.7.228-1"      :scope "test"]
+                 [adzerk/boot-cljs            "1.7.228-2"      :scope "test"]
                  [adzerk/boot-cljs-repl       "0.3.3"          :scope "test"]
                  [adzerk/boot-test            "1.1.2"          :scope "test"]
                  [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"]
-                 [adzerk/boot-reload          "0.4.12"         :scope "test"]
+                 [adzerk/boot-reload          "0.4.13"         :scope "test"]
                  [adzerk/bootlaces            "0.1.13"         :scope "test"]
                  [org.clojure/tools.nrepl     "0.2.12"         :scope "test"]
                  [org.clojure/tools.namespace "0.3.0-alpha3"   :scope "test"]
                  [weasel                      "0.7.0"          :scope "test"]
-                 [boot-codox                  "0.10.0"         :scope "test"]])
+                 [boot-codox                  "0.10.1"         :scope "test"]])
 
 (require
  '[adzerk.boot-cljs      :refer [cljs]]
