@@ -121,8 +121,8 @@
                the route's parameters).
      "
   ([x next-route]
-   (set-route! x next-route {:queue? true}))
-  ([x next-route {:keys [queue? params tx]}]
+   (set-route! x next-route nil))
+  ([x next-route {:keys [queue? params tx] :or {queue? true}}]
    {:pre [(or (om/reconciler? x) (application? x) (om/component? x))
           (or (util/ident? next-route) (keyword? next-route))]}
    (let [reconciler (cond-> x

@@ -20,6 +20,9 @@ configuration map. Use the `compassus.core/wrap-render` mixin instead.
 - **BREAKING**: removed the `:history` option from the `compassus.core/application`
 configuration map. Use the new component lifecycle mixins instead.
 
+### Bug fixes
+
+- `queue?` in `compassus.core/set-route!` should default to true in all function arities ([#15](https://github.com/compassus/compassus/issues/15)).
 
 ## [0.2.1](https://github.com/anmonteiro/compassus/compare/0.2.0...0.2.1) (2016-07-11)
 

@@ -816,3 +816,9 @@
     (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
                (get ::c/mixin-data))
            posts-init-state))))
+
+(deftest test-compassus-15
+  (with-redefs [om/transform-reads (fn [_ _] [{:foo [:bar]}])
+                om/transact! (fn [_ tx] tx)]
+    (is (some #{{:foo [:bar]}} (c/set-route! *app* :about)))
+    (is (some #{{:foo [:bar]}} (c/set-route! *app* :about {:params {:route-params {:foo 42}}})))))
