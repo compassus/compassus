@@ -186,6 +186,23 @@
                  :title "Another Post!"
                  :content "Lorem ipsum dolor sit amet, quem atomorum te quo"}]})
 
+(defui User
+  static om/Ident
+  (ident [this {:keys [id]}]
+    [:user/by-id id])
+  static om/IQuery
+  (query [this]
+    [:id :name]))
+
+(defui UserList
+  static om/IQuery
+  (query [this]
+    [{:users/list (om/get-query User)}]))
+
+(def users-init-state
+  {:users/list [{:id 0 :name "Alice"}
+                {:id 1 :name "Bob"}]})
+
 (defn posts-read
   [{:keys [state query]} k _]
   (let [st @state]
@@ -200,7 +217,21 @@
     (is (not= posts-init-state (dissoc @r ::c/route ::om/tables)))
     (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
                (get ::c/route-data))
-           posts-init-state))))
+           posts-init-state)))
+  (let [app (c/application {:routes {:posts PostList
+                                     :users UserList}
+                            :reconciler-opts {:state (merge posts-init-state
+                                                       users-init-state)
+                                              :parser (om/parser {:read posts-read})}})
+        r (c/get-reconciler app)
+        p (-> r :config :parser)]
+    (is (not= (merge posts-init-state
+                users-init-state)
+              (dissoc @r ::c/route ::om/tables)))
+    (is (= (:users/list @r)
+           [[:user/by-id 0] [:user/by-id 1]]))
+    (is (= (get-in @r [:user/by-id 1])
+           {:id 1 :name "Bob"}))))
 
 (defmulti local-parser-read om/dispatch)
 (defmethod local-parser-read :index
