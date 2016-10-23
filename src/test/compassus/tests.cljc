@@ -53,10 +53,10 @@
       {:routes {:index Home
                 :about About}
        :index-route :index
-       :reconciler-opts
-       {:state (atom init-state)
-        :parser (om/parser {:read app-read
-                            :mutate app-mutate})}})))
+       :reconciler (om/reconciler
+                     {:state (atom init-state)
+                      :parser (c/parser {:read app-read
+                                         :mutate app-mutate})})})))
 
 (defn unset-app! []
   (set! *app* nil))
@@ -116,34 +116,27 @@
                {:routes {:index Home
                          :about About}
                 :index-route :about
-                :reconciler-opts
-                {:state init-state
-                 :parser (om/parser {:read app-read})}})
+                :reconciler (om/reconciler
+                              {:state init-state
+                               :parser (c/parser {:read app-read})})})
         app2 (c/application
                {:routes {:index Home
                          :about About}
                 :index-route :index
-                :reconciler-opts
-                {:state init-state
-                 :parser (om/parser {:read app-read})}})]
+                :reconciler (om/reconciler
+                              {:state init-state
+                               :parser (c/parser {:read app-read})})})]
     (is (= (c/current-route app1) :about))
     (is (= (c/current-route app2) :index))))
 
 (deftest test-parsing
   (testing "generate parser"
-    (let [user-parser (om/parser {:read app-read})
-          om-parser (#'c/make-parser user-parser)
+    (let [parser (c/parser {:read app-read})
           st (merge init-state {::c/route :index})]
-      (is (fn? om-parser))
-      (is (= (om-parser {:state (atom st)} (om/get-query (c/root-class *app*)))
+      (is (fn? parser))
+      (is (= (parser {:state (atom st)} (om/get-query (c/root-class *app*)))
              {::c/route :index
-              ::c/route-data (select-keys init-state (om/get-query Home))}))))
-  (testing "parser integration in compassus app"
-    (let [user-parser (-> *app* :config :parser)
-          om-parser   (-> *app* c/get-reconciler :config :parser)]
-      (is (some? user-parser))
-      (is (some? om-parser))
-      (is (not= user-parser om-parser)))))
+              ::c/route-data (select-keys init-state (om/get-query Home))})))))
 
 (deftest test-set-route!
   (is (thrown-with-msg? #?(:clj  AssertionError
@@ -210,8 +203,9 @@
 
 (deftest test-app-normalizes-state-maps
   (let [app (c/application {:routes {:posts PostList}
-                            :reconciler-opts {:state posts-init-state
-                                              :parser (om/parser {:read posts-read})}})
+                            :reconciler (om/reconciler
+                                          {:state posts-init-state
+                                           :parser (c/parser {:read posts-read})})})
         r (c/get-reconciler app)
         p (-> r :config :parser)]
     (is (not= posts-init-state (dissoc @r ::c/route ::om/tables)))
@@ -220,9 +214,10 @@
            posts-init-state)))
   (let [app (c/application {:routes {:posts PostList
                                      :users UserList}
-                            :reconciler-opts {:state (merge posts-init-state
-                                                       users-init-state)
-                                              :parser (om/parser {:read posts-read})}})
+                            :reconciler (om/reconciler
+                                          {:state (merge posts-init-state
+                                                    users-init-state)
+                                           :parser (c/parser {:read posts-read})})})
         r (c/get-reconciler app)
         p (-> r :config :parser)]
     (is (not= (merge posts-init-state
@@ -285,15 +280,15 @@
                         :about About
                         :other Other}
                :index-route :index
-               :reconciler-opts
-               {:state  (atom {})
-                :parser (om/parser {:read   local-parser-read
-                                    :mutate local-parser-mutate})
-                :remotes [:some-remote]
-                :merge  c/compassus-merge
-                :send   (fn [{:keys [some-remote]} cb]
-                          (cb (remote-parser {} some-remote))
-                          (close! c))}})
+               :reconciler (om/reconciler
+                             {:state  (atom {})
+                              :parser (c/parser {:read   local-parser-read
+                                                  :mutate local-parser-mutate})
+                              :remotes [:some-remote]
+                              :merge  c/compassus-merge
+                              :send   (fn [{:keys [some-remote]} cb]
+                                        (cb (remote-parser {} some-remote))
+                                        (close! c))})})
         r (c/get-reconciler app)]
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])
@@ -325,14 +320,15 @@
               {:routes {:index Home
                         :about About}
                :index-route :index
-               :reconciler-opts
-               {:state  (atom {})
-                :parser (om/parser {:read   local-parser-read
-                                    :mutate local-parser-mutate})
-                :merge  (fn [reconciler state res query]
-                          (om/default-merge reconciler state {:foo res} query))
-                :send   (fn [{:keys [remote]} cb]
-                          (cb (remote-parser {} remote)))}})
+               :reconciler
+               (om/reconciler
+                 {:state  (atom {})
+                  :parser (c/parser {:read   local-parser-read
+                                      :mutate local-parser-mutate})
+                  :merge  (fn [reconciler state res query]
+                            (om/default-merge reconciler state {:foo res} query))
+                  :send   (fn [{:keys [remote]} cb]
+                            (cb (remote-parser {} remote)))})})
         r (c/get-reconciler app)]
     (c/mount! app nil)
     (is (contains? @(c/get-reconciler app) :foo))))
@@ -359,26 +355,26 @@
               {:routes {:index Home
                         [:item/by-id 0] About}
                :index-route [:item/by-id 0]
-               :reconciler-opts
-               {:state  (atom idents-state)
-                :parser (om/parser {:read ident-parser-read})}})
+               :reconciler (om/reconciler
+                             {:state  (atom idents-state)
+                              :parser (c/parser {:read ident-parser-read})})})
         r (c/get-reconciler app)
         p (-> r :config :parser)]
     (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
                (get ::c/route-data))
            {:id 0
             :name "some item"})))
-  (let [app-parser (om/parser {:read ident-parser-read})
+  (let [remote-parser (om/parser {:read ident-parser-read})
         app (c/application
               {:routes {:index Home
                         [:item/by-id 0] About}
                :index-route [:item/by-id 0]
-               :reconciler-opts
-               {:state  {}
-                :parser app-parser
-                :merge c/compassus-merge
-                :send   (fn [{:keys [remote]} cb]
-                          (cb (app-parser {} remote)))}})
+               :reconciler (om/reconciler
+                             {:state  {}
+                              :parser (c/parser {:read ident-parser-read})
+                              :merge c/compassus-merge
+                              :send   (fn [{:keys [remote]} cb]
+                                        (cb (remote-parser {} remote)))})})
         r (c/get-reconciler app)]
     (c/mount! app nil)
     (is (= (dissoc @(-> r :config :state) ::om/tables ::c/route)
@@ -393,10 +389,10 @@
               {:routes {:index Home
                         :foo   About}
                :index-route :foo
-               :reconciler-opts
-               {:state  (atom {})
-                :parser (om/parser {:read   local-parser-read
-                                    :mutate local-parser-mutate})}})
+               :reconciler (om/reconciler
+                             {:state  (atom {})
+                              :parser (c/parser {:read   local-parser-read
+                                                 :mutate local-parser-mutate})})})
         r (c/get-reconciler app)
         p (-> r :config :parser)]
     (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
@@ -415,11 +411,13 @@
 (deftest test-remote-normalization
   (let [remote-parser (om/parser {:read remote-normalization-read})
         app (c/application {:routes {:posts PostList}
-                            :reconciler-opts {:state {}
-                                              :merge c/compassus-merge
-                                              :send (fn [{:keys [remote]} cb]
-                                                      (cb (remote-parser {} remote) remote))
-                                              :parser (om/parser {:read remote-normalization-local-read})}})
+                            :reconciler
+                            (om/reconciler
+                              {:state {}
+                               :merge c/compassus-merge
+                               :send (fn [{:keys [remote]} cb]
+                                       (cb (remote-parser {} remote) remote))
+                               :parser (c/parser {:read remote-normalization-local-read})})})
         r (c/get-reconciler app)]
     (c/mount! app nil)
     (is (contains? @r :posts/list))
@@ -439,8 +437,9 @@
 
 (deftest test-change-remote-mutation
   (let  [app (c/application {:routes {:posts PostList}
-                             :reconciler-opts {:state {}
-                                               :parser (om/parser {:mutate change-remote-mutation-local-mutate})}})
+                             :reconciler (om/reconciler
+                                           {:state {}
+                                            :parser (c/parser {:mutate change-remote-mutation-local-mutate})})})
          r (c/get-reconciler app)]
     (is (= (om/gather-sends (#'om/to-env r)
              '[(do/stuff! {:when :now})] [:remote])
@@ -499,12 +498,12 @@
 (deftest test-transact-re-reads
   (let [app (c/application
               {:routes {:index Index}
-               :reconciler-opts
-               {:state  (atom {:app/title "Some App"
-                               :app/menu {:foo "foo"
-                                          :bar "bar"}})
-                :parser (om/parser {:read   transact-read
-                                    :mutate app-mutate})}})
+               :reconciler (om/reconciler
+                             {:state  (atom {:app/title "Some App"
+                                             :app/menu {:foo "foo"
+                                                        :bar "bar"}})
+                              :parser (c/parser {:read   transact-read
+                                                 :mutate app-mutate})})})
         r (c/get-reconciler app)
         p (-> r :config :parser)
         reread-ret1 (p (#'om/to-env r) '[(some/action!) :app/menu])
@@ -544,13 +543,13 @@
     (let [tmpid (om/tempid)
           app (c/application
                 {:routes {:index People}
-                 :reconciler-opts
-                 {:state (atom {:people [[:person/by-id tmpid]]
-                                :person/by-id {tmpid {:db/id tmpid
-                                                      :person/name "Joe"}}})
-                  :normalize true
-                  :id-key :db/id
-                  :parser (om/parser {:read transact-read})}})
+                 :reconciler (om/reconciler
+                               {:state (atom {:people [[:person/by-id tmpid]]
+                                              :person/by-id {tmpid {:db/id tmpid
+                                                                    :person/name "Joe"}}})
+                                :normalize true
+                                :id-key :db/id
+                                :parser (c/parser {:read transact-read})})})
           r (c/get-reconciler app)]
       (c/mount! app nil)
       (is (om/tempid? (-> @r :person/by-id ffirst)))
@@ -564,16 +563,17 @@
     (let [tmpid (om/tempid)
           app (c/application
                 {:routes {:index People}
-                 :reconciler-opts
-                 {:state (atom {:people [[:person/by-id tmpid]]
-                                :person/by-id {tmpid {:db/id tmpid
-                                                      :person/name "Joe"}}})
-                  :migrate (fn [app-state-pure query tempids id-key]
-                             (assoc (om/default-migrate app-state-pure query tempids id-key)
-                               :random/key 42))
-                  :normalize true
-                  :id-key :db/id
-                  :parser (om/parser {:read transact-read})}})
+                 :reconciler
+                 (om/reconciler
+                   {:state (atom {:people [[:person/by-id tmpid]]
+                                  :person/by-id {tmpid {:db/id tmpid
+                                                        :person/name "Joe"}}})
+                    :migrate (fn [app-state-pure query tempids id-key]
+                               (assoc (om/default-migrate app-state-pure query tempids id-key)
+                                 :random/key 42))
+                    :normalize true
+                    :id-key :db/id
+                    :parser (c/parser {:read transact-read})})})
           r (c/get-reconciler app)]
       (c/mount! app nil)
       (is (om/tempid? (-> @r :person/by-id ffirst)))
@@ -592,9 +592,9 @@
     (let [app (c/application {:routes {:index Home
                                        :static StaticRoute}
                               :index-route :index
-                              :reconciler-opts
-                              {:state (atom init-state)
-                               :parser (om/parser {:read app-read})}})
+                              :reconciler (om/reconciler
+                                            {:state (atom init-state)
+                                             :parser (c/parser {:read app-read})})})
           r (c/get-reconciler app)
           p (-> r :config :parser)]
       (c/mount! app nil)
@@ -612,9 +612,9 @@
     (let [app (c/application {:routes {:static StaticRoute
                                        :about About}
                               :index-route :static
-                              :reconciler-opts
-                              {:state (atom init-state)
-                               :parser (om/parser {:read app-read})}})
+                              :reconciler (om/reconciler
+                                            {:state (atom init-state)
+                                             :parser (c/parser {:read app-read})})})
           r (c/get-reconciler app)
           p (-> r :config :parser)]
       (c/mount! app nil)
@@ -677,12 +677,13 @@
           app (c/application {:routes {:index Home}
                               :index-route :index
                               :mixins [(c/wrap-render wrapper)]
-                              :reconciler-opts
-                              {:state (atom init-state)
-                               :parser (om/parser {:read app-read})
-                               :root-unmount (fn [_])
-                               #?@(:cljs [:root-render (fn [c target]
-                                                         (.render shallow-renderer c))])}})
+                              :reconciler
+                              (om/reconciler
+                                {:state (atom init-state)
+                                 :parser (c/parser {:read app-read})
+                                 :root-unmount (fn [_])
+                                 #?@(:cljs [:root-render (fn [c target]
+                                                           (.render shallow-renderer c))])})})
           c (c/mount! app :target)]
       #?(:clj (p/-render c))
       (is (= (:props @update-atom) (select-keys init-state (om/get-query Home))))
@@ -718,12 +719,13 @@
         (let [#?@(:cljs [shallow-renderer (.createRenderer test-utils)])
               app (c/application {:routes {:index Home}
                                   :mixins [(c/wrap-render wrapper)]
-                                  :reconciler-opts
-                                  {:state (atom init-state)
-                                   :parser (om/parser {:read app-read})
-                                   :root-unmount (fn [_])
-                                   #?@(:cljs [:root-render (fn [c target]
-                                                             (.render shallow-renderer c))])}})
+                                  :reconciler
+                                  (om/reconciler
+                                    {:state (atom init-state)
+                                     :parser (c/parser {:read app-read})
+                                     :root-unmount (fn [_])
+                                     #?@(:cljs [:root-render (fn [c target]
+                                                               (.render shallow-renderer c))])})})
               root (c/root-class app)
               c (c/mount! app :target)]
           #?(:clj (p/-render c))
@@ -746,14 +748,15 @@
                                          (fn [this]
                                            (swap! update-atom update-in
                                              [:will-unmount] (fnil inc 0))))]
-                              :reconciler-opts
-                              {:state (atom {})
-                               :parser (om/parser {:read (fn [_ _ _]
-                                                           {:value {}})})
-                               :root-unmount (fn [_]
-                                               #?(:cljs (.unmount shallow-renderer)))
-                               #?@(:cljs [:root-render (fn [c target]
-                                                         (.render shallow-renderer c))])}})
+                              :reconciler
+                              (om/reconciler
+                                {:state (atom {})
+                                 :parser (c/parser {:read (fn [_ _ _]
+                                                             {:value {}})})
+                                 :root-unmount (fn [_]
+                                                 #?(:cljs (.unmount shallow-renderer)))
+                                 #?@(:cljs [:root-render (fn [c target]
+                                                           (.render shallow-renderer c))])})})
           c (c/mount! app :target)]
       #?(:clj (p/-render c))
       (is (= (-> @update-atom :will-mount) 1))
@@ -795,10 +798,11 @@
     (let [app (c/application
                 {:routes {:index Home}
                  :mixins [(c/wrap-render RenderWrapper)]
-                 :reconciler-opts
-                 {:state  (atom {})
-                  :parser (om/parser {:read remote-mixins-read})
-                  :remotes [:some-remote]}})
+                 :reconciler
+                 (om/reconciler
+                   {:state  (atom {})
+                    :parser (c/parser {:read remote-mixins-read})
+                    :remotes [:some-remote]})})
           r (c/get-reconciler app)
           root (c/root-class app)]
       (is (= (om/get-query root)
@@ -814,11 +818,12 @@
           app (c/application
                 {:routes {:index Home}
                  :mixins [(c/wrap-render RenderWrapper)]
-                 :reconciler-opts
-                 {:state  (atom init-state)
-                  :parser (om/parser {:read remote-mixins-read})
-                  #?@(:cljs [:root-render (fn [c target]
-                                            (.render shallow-renderer c))])}})
+                 :reconciler
+                 (om/reconciler
+                   {:state  (atom init-state)
+                    :parser (c/parser {:read remote-mixins-read})
+                    #?@(:cljs [:root-render (fn [c target]
+                                              (.render shallow-renderer c))])})})
           r (c/get-reconciler app)
           root (c/root-class app)
           c (c/mount! app :target)
@@ -842,8 +847,10 @@
 (deftest test-app-normalizes-mixin-queries
   (let [app (c/application {:routes {:posts MixinPostList}
                             :mixins [(c/wrap-render PostList)]
-                            :reconciler-opts {:state posts-init-state
-                                              :parser (om/parser {:read mixin-posts-read})}})
+                            :reconciler
+                            (om/reconciler
+                              {:state posts-init-state
+                               :parser (c/parser {:read mixin-posts-read})})})
         r (c/get-reconciler app)
         p (-> r :config :parser)]
     (is (not= posts-init-state (dissoc @r ::c/route ::om/tables)))
@@ -873,10 +880,10 @@
                 {:routes {:index Home
                           :about About}
                  :index-route :index
-                 :reconciler-opts
-                 {:state (atom init-state)
-                  :parser (c/parser {:read flat-read
-                                     :route-dispatch false})}})
+                 :reconciler (om/reconciler
+                               {:state (atom init-state)
+                                :parser (c/parser {:read flat-read
+                                                   :route-dispatch false})})})
           r (c/get-reconciler app)
           p (-> r :config :parser)]
       (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
@@ -888,9 +895,9 @@
                 {:routes {:index Home
                           :about About}
                  :index-route :index
-                 :reconciler-opts
-                 {:state (atom init-state)
-                  :parser (c/parser {:read (fn [_ _ _] {:value :foo})})}})
+                 :reconciler (om/reconciler
+                               {:state (atom init-state)
+                                :parser (c/parser {:read (fn [_ _ _] {:value :foo})})})})
           r (c/get-reconciler app)
           p (-> r :config :parser)]
       (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
@@ -929,14 +936,14 @@
                         :about About
                         :other Other}
                :index-route :index
-               :reconciler-opts
-               {:state  (atom {})
-                :parser (c/parser {:read   local-flat-read
-                                   :route-dispatch false})
-                :remotes [:some-remote]
-                :send (fn [{:keys [some-remote]} cb]
-                        (cb (remote-parser {} some-remote))
-                        (close! c))}})
+               :reconciler (om/reconciler
+                             {:state  (atom {})
+                              :parser (c/parser {:read   local-flat-read
+                                                 :route-dispatch false})
+                              :remotes [:some-remote]
+                              :send (fn [{:keys [some-remote]} cb]
+                                      (cb (remote-parser {} some-remote))
+                                      (close! c))})})
         r (c/get-reconciler app)]
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])

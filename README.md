@@ -101,7 +101,10 @@ Routes can also be idents. Below is an example route definition that uses an ide
 
 ### Assembling a Compassus application
 
-Creating a Compassus application is done by calling the `application` function. This function accepts a configuration map that should contain your routes and the options to pass to the Om Next reconciler. Compassus will create the reconciler for you. Here's an example:
+Creating a Compassus application is done by calling the `application` function.
+This function accepts a configuration map that should contain your routes and
+an Om Next reconciler. Note that the parser must be constructed with `compassus.core/parser`.
+Here's an example:
 
 ``` clojure
 (def app
@@ -109,8 +112,9 @@ Creating a Compassus application is done by calling the `application` function. 
     {:routes {:index Index
               :about About}
      :index-route :index
-     :reconciler-opts {:state {}
-                       :parser (om/parser {:read read))}}))
+     :reconciler (om/reconciler
+                   {:state {}
+                    :parser (compassus/parser {:read read))})}))
 ```
 
 #### Implementing the parser
@@ -144,10 +148,10 @@ route of the Compassus application.
 
 In some cases you may not want the parser to dispatch on your application's current
 route, but instead on the query that its component declares. This is optionally
-possible by using the `compassus.core/parser` function. This function takes the
-exact same arguments as `om.next/parser`, along with an optional `:route-dispatch`
-key. If set to `false`, the parser will not dispatch on the current route, but instead
-on the query of the component pertaining to that route. Here's an example:
+possible by passing an optional `:route-dispatch` key in the configuration map
+passed to `compassus.core/parser`. If set to `false`, the parser will not dispatch
+on the current route, but instead on the query of the component pertaining to that
+route. Here's an example:
 
 ``` clojure
 (defui Home
@@ -163,9 +167,10 @@ on the query of the component pertaining to that route. Here's an example:
   (compassus/application
     {:routes {:index Home}
      :index-route :index
-     :reconciler-opts {:state {}
-                       :parser (compassus/parser {:read read
-                                                  :route-dispatch false))}}))
+     :reconciler (om/reconciler
+                   {:state {}
+                    :parser (compassus/parser {:read read
+                                               :route-dispatch false))})}))
 
 ;; our parser won't dispatch on the `:index` key (the current route), but instead
 ;; on the `:menu` and `:footer` keys that are part of `Home`'s query:
@@ -182,7 +187,6 @@ on the query of the component pertaining to that route. Here's an example:
   {:value ...
    :remote ...})
 ```
-
 
 #### Mixins
 
@@ -233,7 +237,7 @@ Example:
 (def app
   (compassus/application
     {:routes ...
-     :reconciler-opts ...
+     :reconciler (om/reconciler ...)
      :mixins [(compassus/wrap-render wrapper)]}))
 
 
@@ -307,13 +311,14 @@ component's query could also be done as shown below:
 (def app
   (compassus/application
     {:routes ...
-     :reconciler-opts ...
+     :reconciler (om/reconciler ...)
      :mixins [{:render MyWrapper}]}))
 ```
 
 #### Utility functions
 
-There are a few utility functions in `compassus.core`. Below is a description of these functions along with simple examples of their usage.
+There are a few utility functions in `compassus.core`. Below is a description of
+these functions along with simple examples of their usage.
 
 ##### **`root-class`**
 
@@ -363,9 +368,10 @@ By default, Compassus uses Om's `default-merge` function to merge remote respons
 ``` clojure
 (compassus/application
   {:routes ...
-   :reconciler-opts {:state ...
-                     :parser ...
-                     :merge compassus/compassus-merge}})
+   :reconciler (om/reconciler
+                 {:state ...
+                  :parser ...
+                  :merge compassus/compassus-merge})})
 ```
 
 ### Changing routes

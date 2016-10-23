@@ -26,6 +26,10 @@ configuration map. Use the new component lifecycle mixins instead.
 - **BREAKING**: removed the `compassus.core/index-route` function. Use the `:index-route`
 key in the configuration map passed to `compassus.core/application` instead. Example
 [here](https://github.com/compassus/compassus#declaring-routes).
+- **BREAKING**: replaced the `:reconciler-opts` key in the `compassus.core/application`
+configuration map with a `:reconciler` key that takes an Om Next reconciler. Note
+that the parser in this reconciler must be constructed with `compassus.core/parser`,
+not `om.next/parser`. ([#7](https://github.com/compassus/compassus/issues/7))
 
 ### Bug fixes
 

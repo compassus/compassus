@@ -112,8 +112,9 @@
                            :app/about About}
                   :index-route :app/home
                   :mixins [(c/wrap-render wrapper)]
-                  :reconciler-opts {:state (atom app-state)
-                                    :parser (om/parser {:read read})}}))
+                  :reconciler (om/reconciler
+                                {:state (atom app-state)
+                                 :parser (c/parser {:read read})})}))
 
 (defcard denormalized-simple-example
   "An example without normalization."
@@ -252,9 +253,10 @@
   (c/application
     {:routes {:notes NoteList
               :users UserList}
-     :reconciler-opts {:state notes-app-state
-                       :parser (om/parser {:read notes-read
-                                           :mutate notes-mutate})}}))
+     :reconciler (om/reconciler
+                   {:state notes-app-state
+                    :parser (c/parser {:read notes-read
+                                       :mutate notes-mutate})})}))
 
 (defcard normalization-example
   "An example without normalization."
@@ -372,8 +374,9 @@
                            [:item/by-id 0] Item}
                   :index-route :items
                   :mixins [(c/wrap-render Wrapper)]
-                  :reconciler-opts {:state idents-app-state
-                                    :parser (om/parser {:read idents-read})}}))
+                  :reconciler (om/reconciler
+                                {:state idents-app-state
+                                 :parser (c/parser {:read idents-read})})}))
 
 (defcard idents-example
   "## Idents in routes
@@ -460,9 +463,10 @@
                            :app/about About}
                   :index-route :app/home
                   :mixins [(c/wrap-render IQueryWrapper)]
-                  :reconciler-opts {:state (atom (merge app-state
-                                                   {:current-user "Bob"}))
-                                    :parser (om/parser {:read read})}}))
+                  :reconciler (om/reconciler
+                                {:state (atom (merge app-state
+                                                {:current-user "Bob"}))
+                                 :parser (c/parser {:read read})})}))
 
 (defcard IQuery-wrapper-example
   "An example with a mixin that implements `IQuery`. `:current-user` is data common to all routes"

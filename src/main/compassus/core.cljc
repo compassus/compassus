@@ -242,11 +242,6 @@
                             :route-dispatch route-dispatch?})]
       (f env' key params))))
 
-(defn- make-parser [user-parser]
-  (let [{:keys [route-dispatch] :or {route-dispatch true}} (meta user-parser)]
-    (om/parser {:read   (generate-parser-fn read user-parser route-dispatch)
-                :mutate (generate-parser-fn mutate user-parser route-dispatch)})))
-
 (defn parser
   "Create a Om Next parser from a configuration map. Possible options include:
 
@@ -256,10 +251,11 @@
                        the current route. If set to `false`, dispatches on all the
                        keys in the query of the component pertaining to the current
                        route. Defaults to `true`.
-"
+  "
   [{:keys [route-dispatch] :or {route-dispatch true} :as opts}]
-  (with-meta (om/parser (dissoc opts :route-dispatch))
-    {:route-dispatch route-dispatch}))
+  (let [user-parser (om/parser (dissoc opts :route-dispatch))]
+    (om/parser {:read   (generate-parser-fn read user-parser route-dispatch)
+                :mutate (generate-parser-fn mutate user-parser route-dispatch)})))
 
 (defn compassus-merge
   "Helper function to replace `om.next/default-merge`. Unwraps the current route
@@ -290,30 +286,28 @@
             remotes)
       cb)))
 
-(defn- process-reconciler-opts
-  [{:keys [state parser migrate send]
-    :or {migrate #'om/default-migrate}
-    :as reconciler-opts} route->component index-route mixins]
-  (let [normalize? (not #?(:clj  (instance? clojure.lang.Atom state)
-                           :cljs (satisfies? IAtom state)))
+(defn- assemble-compassus-reconciler
+  [reconciler route->component index-route mixins]
+  (let [{:keys [state parser migrate send]
+         :or {migrate #'om/default-migrate}
+         :as cfg} (:config reconciler)
+        normalize? (and (:normalize cfg)
+                        (not (:normalized @(:state reconciler))))
         route-info {::route index-route}
-        state (if normalize?
-                (let [merged-query (transduce (map om/get-query)
-                                     (completing into)
-                                     (or (om/get-query (collect-1 :render mixins)) [])
-                                     (vals route->component))]
-                  (atom (merge (om/tree->db merged-query state true)
-                               route-info)))
-                (doto state
-                  (swap! merge route-info)))]
-    (merge reconciler-opts
-           {:state state
-            :parser (make-parser parser)
-            :migrate (make-migrate-fn migrate)}
-           (when send
-             {:send (wrap-send send)})
-           (when normalize?
-             {:normalize true}))))
+        _ (if normalize?
+            (let [merged-query (transduce (map om/get-query)
+                                 (completing into)
+                                 (or (om/get-query (collect-1 :render mixins)) [])
+                                 (vals route->component))]
+              (reset! state (merge (om/tree->db merged-query @state true)
+                              route-info))
+              (swap! (:state reconciler) assoc :normalized true))
+            (swap! state merge route-info))
+        new-cfg (merge cfg
+                  {:migrate (make-migrate-fn migrate)}
+                  (when send
+                    {:send (wrap-send send)}))]
+    (assoc reconciler :config new-cfg)))
 
 (defn application
   "Construct a Compassus application from a configuration map.
@@ -331,10 +325,8 @@
      :index-route     - a keyword or ident denoting the initial application route.
                         Its value must be a key in the `:routes` map.
 
-     :reconciler-opts - a map of options used to construct the Om Next reconciler.
-                        Valid options can be found in the following link:
-
-                        https://github.com/omcljs/om/wiki/Documentation-%28om.next%29#reconciler-1
+     :reconciler      - an Om Next reconciler. Note the parser must be constructed
+                        with `compassus.core/parser`.
 
    Optional parameters:
 
@@ -351,15 +343,13 @@
                           Refer to the specific documentation of those functions
                           for more information.
   "
-  [{:keys [routes index-route mixins reconciler-opts] :as opts}]
+  [{:keys [routes index-route mixins reconciler] :as opts}]
   (let [index-route (or index-route (ffirst routes))
-        reconciler-opts' (process-reconciler-opts reconciler-opts routes
-                           index-route mixins)
-        reconciler (om/reconciler reconciler-opts')]
+        reconciler (assemble-compassus-reconciler reconciler routes
+                     index-route mixins)]
     (CompassusApplication.
       {:route->component routes
        :mixins           mixins
-       :parser           (:parser reconciler-opts)
        :reconciler       reconciler
        :root-class       (make-root-class opts)}
       (atom {}))))
