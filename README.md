@@ -28,7 +28,7 @@ Read the [announcement blog post](https://anmonteiro.com/2016/06/the-quest-for-a
 Leiningen dependency information:
 
 ```clojure
-[compassus "0.2.1"]
+[compassus "1.0.0-alpha1"]
 ```
 
 Maven dependency information:
@@ -37,15 +37,8 @@ Maven dependency information:
 <dependency>
   <groupId>compassus</groupId>
   <artifactId>compassus</artifactId>
-  <version>0.2.1</version>
+  <version>1.0.0-alpha1</version>
 </dependency>
-```
-
-### Pre-release
-
-Grab a pre-release version of the latest features by depending on the following:
-```clojure
-[compassus "0.3.0-SNAPSHOT"]
 ```
 
 ## Guide
@@ -498,7 +491,7 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and
 
 ## Documentation
 
-There's API documentation [here](https://compassus.github.io/compassus/doc/0.2.1/).
+There's API documentation [here](https://compassus.github.io/compassus/doc/1.0.0-alpha1/).
 
 There are also some devcards examples [here](https://compassus.github.io/compassus/devcards/). Refer to their [source](./src/devcards/compassus/devcards/core.cljs) for more information.
 
