@@ -50,8 +50,9 @@
 (defn set-app! []
   (set! *app*
     (c/application
-      {:routes {:index (c/index-route Home)
+      {:routes {:index Home
                 :about About}
+       :index-route :index
        :reconciler-opts
        {:state (atom init-state)
         :parser (om/parser {:read app-read
@@ -113,25 +114,18 @@
 (deftest test-index-route
   (let [app1 (c/application
                {:routes {:index Home
-                         :about (c/index-route About)}
+                         :about About}
+                :index-route :about
                 :reconciler-opts
                 {:state init-state
                  :parser (om/parser {:read app-read})}})
         app2 (c/application
-               {:routes {:index (c/index-route Home)
+               {:routes {:index Home
                          :about About}
+                :index-route :index
                 :reconciler-opts
                 {:state init-state
                  :parser (om/parser {:read app-read})}})]
-    (is (thrown-with-msg? #?(:clj  AssertionError
-                             :cljs js/Error)
-          #"Assert failed:" (c/index-route nil)))
-    (is (thrown-with-msg? #?(:clj  AssertionError
-                             :cljs js/Error)
-          #"Assert failed:" (c/index-route app1)))
-    (is (thrown-with-msg? #?(:clj  AssertionError
-                             :cljs js/Error)
-          #"Assert failed:" (c/index-route (c/get-reconciler app1))))
     (is (= (c/current-route app1) :about))
     (is (= (c/current-route app2) :index))))
 
@@ -256,9 +250,10 @@
                                   :mutate remote-parser-mutate})
         c (chan)
         app (c/application
-              {:routes {:index (c/index-route Home)
+              {:routes {:index Home
                         :about About
                         :other Other}
+               :index-route :index
                :reconciler-opts
                {:state  (atom {})
                 :parser (om/parser {:read   local-parser-read
@@ -296,8 +291,9 @@
   (let [remote-parser (om/parser {:read   remote-parser-read
                                   :mutate remote-parser-mutate})
         app (c/application
-              {:routes {:index (c/index-route Home)
+              {:routes {:index Home
                         :about About}
+               :index-route :index
                :reconciler-opts
                {:state  (atom {})
                 :parser (om/parser {:read   local-parser-read
@@ -330,7 +326,8 @@
 (deftest test-ident-routes
   (let [app (c/application
               {:routes {:index Home
-                        [:item/by-id 0] (c/index-route About)}
+                        [:item/by-id 0] About}
+               :index-route [:item/by-id 0]
                :reconciler-opts
                {:state  (atom idents-state)
                 :parser (om/parser {:read ident-parser-read})}})
@@ -343,7 +340,8 @@
   (let [app-parser (om/parser {:read ident-parser-read})
         app (c/application
               {:routes {:index Home
-                        [:item/by-id 0] (c/index-route About)}
+                        [:item/by-id 0] About}
+               :index-route [:item/by-id 0]
                :reconciler-opts
                {:state  {}
                 :parser app-parser
@@ -362,7 +360,8 @@
 (deftest test-route-in-user-parser
   (let [app (c/application
               {:routes {:index Home
-                        :foo   (c/index-route About)}
+                        :foo   About}
+               :index-route :foo
                :reconciler-opts
                {:state  (atom {})
                 :parser (om/parser {:read   local-parser-read
@@ -559,8 +558,9 @@
 
 (deftest test-routes-without-query
   (testing "static route is not the index route"
-    (let [app (c/application {:routes {:index (c/index-route Home)
+    (let [app (c/application {:routes {:index Home
                                        :static StaticRoute}
+                              :index-route :index
                               :reconciler-opts
                               {:state (atom init-state)
                                :parser (om/parser {:read app-read})}})
@@ -578,8 +578,9 @@
       (is (empty? (om/gather-sends (#'om/to-env r)
                     (om/get-query (c/root-class app)) [:remote])))))
   (testing "static route as the index route"
-    (let [app (c/application {:routes {:static (c/index-route StaticRoute)
+    (let [app (c/application {:routes {:static StaticRoute
                                        :about About}
+                              :index-route :static
                               :reconciler-opts
                               {:state (atom init-state)
                                :parser (om/parser {:read app-read})}})
@@ -642,7 +643,8 @@
                       :props props)
                     (factory props))
           #?@(:cljs [shallow-renderer (.createRenderer test-utils)])
-          app (c/application {:routes {:index (c/index-route Home)}
+          app (c/application {:routes {:index Home}
+                              :index-route :index
                               :mixins [(c/wrap-render wrapper)]
                               :reconciler-opts
                               {:state (atom init-state)
@@ -683,7 +685,7 @@
                                                       :omcljs$parent     om/*parent*
                                                       :omcljs$depth      om/*depth*}))))))]
         (let [#?@(:cljs [shallow-renderer (.createRenderer test-utils)])
-              app (c/application {:routes {:index (c/index-route Home)}
+              app (c/application {:routes {:index Home}
                                   :mixins [(c/wrap-render wrapper)]
                                   :reconciler-opts
                                   {:state (atom init-state)
@@ -700,7 +702,7 @@
   (testing "lifecycle mixins"
     (let [update-atom (atom {})
           #?@(:cljs [shallow-renderer (.createRenderer test-utils)])
-          app (c/application {:routes {:index (c/index-route Home)}
+          app (c/application {:routes {:index Home}
                               :mixins [(c/will-mount
                                          (fn [this]
                                            (swap! update-atom update-in
@@ -760,7 +762,7 @@
 (deftest test-iquery-wrapper
   (testing "remote behavior"
     (let [app (c/application
-                {:routes {:index (c/index-route Home)}
+                {:routes {:index Home}
                  :mixins [(c/wrap-render RenderWrapper)]
                  :reconciler-opts
                  {:state  (atom {})
@@ -779,7 +781,7 @@
     (reset! update-atom {})
     (let [#?@(:cljs [shallow-renderer (.createRenderer test-utils)])
           app (c/application
-                {:routes {:index (c/index-route Home)}
+                {:routes {:index Home}
                  :mixins [(c/wrap-render RenderWrapper)]
                  :reconciler-opts
                  {:state  (atom init-state)
@@ -837,8 +839,9 @@
 (deftest test-compassus-12
   (testing "flattening parser"
     (let [app (c/application
-                {:routes {:index (c/index-route Home)
+                {:routes {:index Home
                           :about About}
+                 :index-route :index
                  :reconciler-opts
                  {:state (atom init-state)
                   :parser (c/parser {:read flat-read
@@ -851,8 +854,9 @@
              :home/content :content}))))
   (testing "backwards compatibility"
     (let [app (c/application
-                {:routes {:index (c/index-route Home)
+                {:routes {:index Home
                           :about About}
+                 :index-route :index
                  :reconciler-opts
                  {:state (atom init-state)
                   :parser (c/parser {:read (fn [_ _ _] {:value :foo})})}})
@@ -890,9 +894,10 @@
   (let [remote-parser (om/parser {:read remote-flat-read})
         c (chan)
         app (c/application
-              {:routes {:index (c/index-route Home)
+              {:routes {:index Home
                         :about About
                         :other Other}
+               :index-route :index
                :reconciler-opts
                {:state  (atom {})
                 :parser (c/parser {:read   local-flat-read

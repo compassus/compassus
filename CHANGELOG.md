@@ -23,6 +23,9 @@ means that Compassus requires Om Next 1.0.0-alpha45 or later starting this versi
 configuration map. Use the `compassus.core/wrap-render` mixin instead.
 - **BREAKING**: removed the `:history` option from the `compassus.core/application`
 configuration map. Use the new component lifecycle mixins instead.
+- **BREAKING**: removed the `compassus.core/index-route` function. Use the `:index-route`
+key in the configuration map passed to `compassus.core/application` instead. Example
+[here](https://github.com/compassus/compassus#declaring-routes).
 
 ### Bug fixes
 

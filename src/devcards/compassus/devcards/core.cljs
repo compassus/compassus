@@ -108,8 +108,9 @@
                :about/content "This is the about page, the place where one might write things about their own self."}})
 
 (def app
-  (c/application {:routes {:app/home (c/index-route Home)
+  (c/application {:routes {:app/home Home
                            :app/about About}
+                  :index-route :app/home
                   :mixins [(c/wrap-render wrapper)]
                   :reconciler-opts {:state (atom app-state)
                                     :parser (om/parser {:read read})}}))
@@ -367,8 +368,9 @@
                {:id 2 :name "Item 2"}]})
 
 (def idents-app
-  (c/application {:routes {:items (c/index-route ItemList)
+  (c/application {:routes {:items ItemList
                            [:item/by-id 0] Item}
+                  :index-route :items
                   :mixins [(c/wrap-render Wrapper)]
                   :reconciler-opts {:state idents-app-state
                                     :parser (om/parser {:read idents-read})}}))
@@ -378,7 +380,7 @@
 
   You can also specify routes as idents. In this case, the app routes are:
   ```clojure
-  {:items (c/index-route ItemList)
+  {:items ItemList
    [:item/by-id 0] Item}
   ```
   "
@@ -454,15 +456,16 @@
           (factory props))))))
 
 (def iquery-wrapper-app
-  (c/application {:routes {:app/home (c/index-route Home)
+  (c/application {:routes {:app/home Home
                            :app/about About}
+                  :index-route :app/home
                   :mixins [(c/wrap-render IQueryWrapper)]
                   :reconciler-opts {:state (atom (merge app-state
                                                    {:current-user "Bob"}))
                                     :parser (om/parser {:read read})}}))
 
 (defcard IQuery-wrapper-example
-  "An example with an `IQuery` wrapper. `:current-user` is data common to all routes"
+  "An example with a mixin that implements `IQuery`. `:current-user` is data common to all routes"
   (dom-node
     (fn [_ node]
       (c/mount! iquery-wrapper-app node))))

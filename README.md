@@ -74,13 +74,16 @@ Your application's routes are represented by a map of keywords (the route handle
    :about About})
 ```
 
-To specify the initial route of the application, wrap its component class in a `index-route` call as shown below.
+To specify the initial route of the application, use the `:index-route` configuration
+key in the Compassus application configuration map:
 
 ```clojure
-(def routes
-  ;; :index is the initial route of the application
-  {:index (compassus/index-route Index)
-   :about About})
+(def app
+  (compasssus/application
+    ;; :index is the initial route of the application
+    {:routes {:index Index
+              :about About}}
+     :index-route :index))
 ```
 
 Routes can also be idents. Below is an example route definition that uses an ident as the route key.
@@ -92,7 +95,7 @@ Routes can also be idents. Below is an example route definition that uses an ide
 (defui ItemList
   ...)
 
-{:items (c/index-route ItemList)
+{:items ItemList
  [:item/by-id 0] Item}
 ```
 
@@ -103,8 +106,9 @@ Creating a Compassus application is done by calling the `application` function. 
 ``` clojure
 (def app
   (compassus/application
-    {:routes {:index (compassus/index-route Index)
+    {:routes {:index Index
               :about About}
+     :index-route :index
      :reconciler-opts {:state {}
                        :parser (om/parser {:read read))}}))
 ```
@@ -157,7 +161,8 @@ on the query of the component pertaining to that route. Here's an example:
 
 (def app
   (compassus/application
-    {:routes {:index (compassus/index-route Index)}
+    {:routes {:index Home}
+     :index-route :index
      :reconciler-opts {:state {}
                        :parser (compassus/parser {:read read
                                                   :route-dispatch false))}}))
@@ -439,8 +444,9 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and
 
 (def app
   (compassus/application
-    {:routes  {:index (compassus/index-route Index)
+    {:routes  {:index Index
                :about About}
+     :index-route :index
      :mixins [(compassus/did-mount (fn [_]
                                      (pushy/start! history)))
               (compassus/will-unmount (fn [_]
@@ -472,8 +478,9 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and
 
 (def app
   (compassus/application
-    {:routes  {:index (compassus/index-route Index)
+    {:routes  {:index Index
                :about About}
+     :index-route :index
      :mixins [(compassus/did-mount (fn [_]
                                      (reset! event-key
                                        (evt/listen history EventType/NAVIGATE

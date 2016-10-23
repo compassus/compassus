@@ -88,12 +88,6 @@
         root (root-class app)]
     (om/add-root! reconciler root target)))
 
-(defn index-route
-  "Specifies that the given class is the index route of the application"
-  [class]
-  {:pre [(fn? class)]}
-  (with-meta {:class class} {::index-route true}))
-
 (defn current-route
   "Returns the current application route. x might be the application,
    the reconciler or a component instance."
@@ -267,17 +261,6 @@
   (with-meta (om/parser (dissoc opts :route-dispatch))
     {:route-dispatch route-dispatch}))
 
-(defn- find-index-route [routes]
-  (reduce (fn [fst [k class]]
-            (if (-> class meta ::index-route)
-              (reduced k)
-              fst)) (ffirst routes) routes))
-
-(defn- normalize-routes [routes index-route]
-  (let [class (get routes index-route)]
-    (cond-> routes
-      (map? class) (assoc index-route (:class class)))))
-
 (defn compassus-merge
   "Helper function to replace `om.next/default-merge`. Unwraps the current route
    from the remote response and merges that into the state instead."
@@ -337,13 +320,16 @@
 
    Required parameters:
 
-     :routes          - a map of route handler (keyword) to the Om Next component
-                        that knows how to present that route. The function
-                        `compassus.core/index-route` must be used to define the
-                        application's starting route.
+     :routes          - a map of route handler (keyword or ident) to the Om Next
+                        component that knows how to present that route. The
+                        `:index-route` key in the application's configuration
+                        must be used to define the application's starting route.
 
-                        Example: {:index (compassus/index-route Index)
+                        Example: {:index Index
                                   :about About}
+
+     :index-route     - a keyword or ident denoting the initial application route.
+                        Its value must be a key in the `:routes` map.
 
      :reconciler-opts - a map of options used to construct the Om Next reconciler.
                         Valid options can be found in the following link:
@@ -365,20 +351,17 @@
                           Refer to the specific documentation of those functions
                           for more information.
   "
-  [{:keys [routes mixins reconciler-opts] :as opts}]
-  (let [index-route (find-index-route routes)
-        route->component (normalize-routes routes index-route)
-        reconciler-opts' (process-reconciler-opts reconciler-opts route->component
+  [{:keys [routes index-route mixins reconciler-opts] :as opts}]
+  (let [index-route (or index-route (ffirst routes))
+        reconciler-opts' (process-reconciler-opts reconciler-opts routes
                            index-route mixins)
-        reconciler (om/reconciler reconciler-opts')
-        opts' (merge opts {:routes route->component
-                           :reconciler-opts reconciler-opts'})]
+        reconciler (om/reconciler reconciler-opts')]
     (CompassusApplication.
-      {:route->component route->component
+      {:route->component routes
        :mixins           mixins
        :parser           (:parser reconciler-opts)
        :reconciler       reconciler
-       :root-class       (make-root-class opts')}
+       :root-class       (make-root-class opts)}
       (atom {}))))
 
 ;; =============================================================================
