@@ -10,6 +10,10 @@
 - Added new built-in mixins: `will-mount`, `did-mount` and `will-unmount`, which
 hook into the respective lifecycle methods of the generated root component.
 - Added an invariant that checks a route's factory must exist when rendering a route ([#14](https://github.com/compassus/compassus/issues/14)).
+- Added the possibility to construct a parser that doesn't dispatch on the current
+route, but instead on all the keys in the query of the component associated with
+the route ([#12](https://github.com/compassus/compassus/issues/12)). Read more about
+it [here](https://github.com/compassus/compassus/blob/master/README.md#implementing-the-parser).
 
 ### Changes
 

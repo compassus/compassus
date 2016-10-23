@@ -137,10 +137,12 @@
          (into (om/transform-reads reconciler [::route-data])))))))
 
 (defn- infer-query
-  [{:keys [query]} route]
+  [{:keys [query]} route route-dispatch?]
   (when-let [subq (cond-> query
                     (map? query) (get route))]
-    [{route subq}]))
+    (if route-dispatch?
+      [{route subq}]
+      subq)))
 
 (defn- default-method-impl
   [multi-fn {:keys [target] :as env} key params]
@@ -159,7 +161,7 @@
         (ex-info (str "Missing multimethod implementation for dispatch value " dispatch)
           {:type :error/missing-method-implementation})))))
 
-(defn dispatch
+(defn- dispatch
   "Helper function for implementing Compassus internal read and mutate multimethods.
    Dispatches on the remote target and the parser dispatch key."
   [{:keys [target]} key _]
@@ -176,17 +178,18 @@
   {:value (get @state key)})
 
 (defmethod read [nil ::route-data]
-  [{:keys [route user-parser] :as env} key params]
-  (let [query (infer-query env route)
+  [{:keys [route user-parser route-dispatch] :as env} key params]
+  (let [query (infer-query env route route-dispatch)
         ret (user-parser env query)]
-    {:value (get ret route)}))
+    {:value (cond-> ret
+              route-dispatch (get route))}))
 
 (defmethod read [:default ::route-data]
-  [{:keys [target ast route user-parser] :as env} key params]
-  (let [query (infer-query env route)
+  [{:keys [target ast route user-parser route-dispatch] :as env} key params]
+  (let [query (infer-query env route route-dispatch)
         ret (user-parser env query target)]
     (when-not (empty? ret)
-      {target (parser/expr->ast (first ret))})))
+      {target (parser/query->ast ret)})))
 
 (defmethod read [nil ::mixin-data]
   [{:keys [query user-parser] :as env} key params]
@@ -196,7 +199,7 @@
   [{:keys [target query user-parser] :as env} key params]
   (let [ret (user-parser env query target)]
     (when-not (empty? ret)
-      {target (parser/expr->ast (first ret))})))
+      {target (parser/query->ast ret)})))
 
 (defmethod read [nil :default]
   [{:keys [ast user-parser] :as env} key params]
@@ -209,7 +212,7 @@
   (let [query [(parser/ast->expr ast)]
         ret (user-parser env query target)]
     (when-not (empty? ret)
-      {target (parser/expr->ast (first ret))})))
+      {target (parser/query->ast ret)})))
 
 (defmulti ^:private mutate dispatch)
 
@@ -227,9 +230,9 @@
 (defmethod mutate [:default :default]
   [{:keys [target ast user-parser] :as env} key params]
   (let [tx [(om/ast->query ast)]
-        [ret] (user-parser env tx target)]
-    {target (cond-> ret
-              (some? ret) parser/expr->ast)}))
+        ret (user-parser env tx target)]
+    (when-not (empty? ret)
+      {target (parser/query->ast ret)})))
 
 (defmethod mutate [:default 'compassus.core/set-route!]
   [{:keys [state] :as env} key {:keys [route] :as params}]
@@ -237,16 +240,32 @@
     {:value {:keys (into [::route ::route-data] (keys params))}
      :action #(swap! state merge {::route route} params)}))
 
-(defn- generate-parser-fn [f user-parser]
+(defn- generate-parser-fn [f user-parser route-dispatch?]
   (fn [{:keys [state] :as env} key params]
     (let [route (get @state ::route)
           env'  (merge env {:user-parser user-parser
-                            :route route})]
+                            :route route
+                            :route-dispatch route-dispatch?})]
       (f env' key params))))
 
 (defn- make-parser [user-parser]
-  (om/parser {:read   (generate-parser-fn read user-parser)
-              :mutate (generate-parser-fn mutate user-parser)}))
+  (let [{:keys [route-dispatch] :or {route-dispatch true}} (meta user-parser)]
+    (om/parser {:read   (generate-parser-fn read user-parser route-dispatch)
+                :mutate (generate-parser-fn mutate user-parser route-dispatch)})))
+
+(defn parser
+  "Create a Om Next parser from a configuration map. Possible options include:
+
+     :read           - the read function passed to the Om Next parser.
+     :mutate         - the mutate function passed to the Om Next parser.
+     :route-dispatch - boolean indicating whether the parser should dispatch on
+                       the current route. If set to `false`, dispatches on all the
+                       keys in the query of the component pertaining to the current
+                       route. Defaults to `true`.
+"
+  [{:keys [route-dispatch] :or {route-dispatch true} :as opts}]
+  (with-meta (om/parser (dissoc opts :route-dispatch))
+    {:route-dispatch route-dispatch}))
 
 (defn- find-index-route [routes]
   (reduce (fn [fst [k class]]
@@ -280,8 +299,16 @@
      (merge (select-keys app-state-pure [::route])
        (migrate app-state-pure query tempids id-key)))))
 
+(defn- wrap-send [send]
+  (fn [remotes cb]
+    (send (into {}
+            (map (fn [[k v]]
+                   [k (into [] (mapcat identity) v)]))
+            remotes)
+      cb)))
+
 (defn- process-reconciler-opts
-  [{:keys [state parser migrate]
+  [{:keys [state parser migrate send]
     :or {migrate #'om/default-migrate}
     :as reconciler-opts} route->component index-route mixins]
   (let [normalize? (not #?(:clj  (instance? clojure.lang.Atom state)
@@ -300,6 +327,8 @@
            {:state state
             :parser (make-parser parser)
             :migrate (make-migrate-fn migrate)}
+           (when send
+             {:send (wrap-send send)})
            (when normalize?
              {:normalize true}))))
 

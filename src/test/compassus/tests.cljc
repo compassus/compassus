@@ -5,6 +5,7 @@
             [clojure.core.async :refer [<! close! chan take! #?@(:clj [go <!!])]]
             [clojure.test :refer [deftest testing is are use-fixtures #?(:cljs async)]]
             [om.next :as om :refer [defui ui]]
+            [om.next.impl.parser :as parser]
             [om.next.protocols :as p]
             [compassus.core :as c]))
 
@@ -270,20 +271,20 @@
         r (c/get-reconciler app)]
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])
-           {:some-remote [{:index (om/get-query Home)}]}))
+           {:some-remote [[{:index (om/get-query Home)}]]}))
     (c/mount! app nil)
     (is (= (dissoc @(c/get-reconciler app) ::c/route) (select-keys init-state (om/get-query Home))))
     (is (= (om/gather-sends (#'om/to-env r)
              '[(fire/missiles! {:how-many 42})] [:some-remote])
-           {:some-remote '[(fire/missiles! {:how-many 42})]}))
+           {:some-remote ['[(fire/missiles! {:how-many 42})]]}))
     (c/set-route! app :about)
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])
-           {:some-remote [{:about (om/get-query About)}]}))
+           {:some-remote [[{:about (om/get-query About)}]]}))
     (c/set-route! app :other)
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])
-           {:some-remote [{:other [:changed/key :updated/ast]}]}))
+           {:some-remote [[{:other [:changed/key :updated/ast]}]]}))
     (om/transact! r '[(fire/missiles! {:how-many 3})])
     (test-async
       (go
@@ -413,7 +414,7 @@
          r (c/get-reconciler app)]
     (is (= (om/gather-sends (#'om/to-env r)
              '[(do/stuff! {:when :now})] [:remote])
-           {:remote '[(do/stuff! {:when :later})]}))
+           {:remote ['[(do/stuff! {:when :later})]]}))
     (is (empty? (om/gather-sends (#'om/to-env r)
                   '[(other/stuff!)] [:remote])))))
 
@@ -489,11 +490,11 @@
     (is (contains? reread-ret2 :app/title))
     (is (= (:app/title reread-ret2) "Some App"))
     (is (= (om/gather-sends (#'om/to-env r)
-             `[(some/action!) :remote/key] [:remote])
-           {:remote [:remote/key]}))
+             '[(some/action!) :remote/key] [:remote])
+           {:remote [[:remote/key]]}))
     (is (= (om/gather-sends (#'om/to-env r)
-             `[(some/action!) {:remote/key [:foo :bar]}] [:remote])
-           {:remote [{:remote/key [:foo :bar]}]}))))
+             '[(some/action!) {:remote/key [:foo :bar]}] [:remote])
+           {:remote [[{:remote/key [:foo :bar]}]]}))))
 
 (defui Person
   static om/Ident
@@ -773,7 +774,7 @@
              {::c/mixin-data [{:foo [:bar :baz]}]}]))
       (is (= (om/gather-sends (#'om/to-env r)
                (om/get-query root) [:some-remote])
-            {:some-remote [{:foo [:bar :baz]}]}))))
+             {:some-remote [[{:foo [:bar :baz]}]]}))))
   (testing "wrapper updates"
     (reset! update-atom {})
     (let [#?@(:cljs [shallow-renderer (.createRenderer test-utils)])
@@ -822,3 +823,96 @@
                 om/transact! (fn [_ tx] tx)]
     (is (some #{{:foo [:bar]}} (c/set-route! *app* :about)))
     (is (some #{{:foo [:bar]}} (c/set-route! *app* :about {:params {:route-params {:foo 42}}})))))
+
+(defmulti flat-read om/dispatch)
+
+(defmethod flat-read :home/title
+  [_ _ _]
+  {:value :title})
+
+(defmethod flat-read :home/content
+  [_ _ _]
+  {:value :content})
+
+(deftest test-compassus-12
+  (testing "flattening parser"
+    (let [app (c/application
+                {:routes {:index (c/index-route Home)
+                          :about About}
+                 :reconciler-opts
+                 {:state (atom init-state)
+                  :parser (c/parser {:read flat-read
+                                     :route-dispatch false})}})
+          r (c/get-reconciler app)
+          p (-> r :config :parser)]
+      (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
+               (get ::c/route-data))
+            {:home/title :title
+             :home/content :content}))))
+  (testing "backwards compatibility"
+    (let [app (c/application
+                {:routes {:index (c/index-route Home)
+                          :about About}
+                 :reconciler-opts
+                 {:state (atom init-state)
+                  :parser (c/parser {:read (fn [_ _ _] {:value :foo})})}})
+          r (c/get-reconciler app)
+          p (-> r :config :parser)]
+      (is (= (-> (p {:state (-> r :config :state)} (om/get-query (c/root-class app)))
+               (get ::c/route-data))
+            :foo)))))
+
+(defmulti local-flat-read om/dispatch)
+(defmethod local-flat-read :default
+  [{:keys [state target] :as env} k _]
+  (let [st @state]
+    (if (contains? st k)
+      {:value (get st k)}
+      {target true})))
+
+(defmethod local-flat-read :other/key
+  [{:keys [state query target ast] :as env} _ _]
+  (let [st @state]
+    (if (some st query)
+      {:value st}
+      {target (parser/expr->ast :changed/key)})))
+
+(defmulti remote-flat-read om/dispatch)
+(defmethod remote-flat-read :home/title
+  [_ _ _]
+  {:value :title})
+
+(defmethod remote-flat-read :home/content
+  [_ _ _]
+  {:value :content})
+
+(deftest test-flat-remote-integration
+  (let [remote-parser (om/parser {:read remote-flat-read})
+        c (chan)
+        app (c/application
+              {:routes {:index (c/index-route Home)
+                        :about About
+                        :other Other}
+               :reconciler-opts
+               {:state  (atom {})
+                :parser (c/parser {:read   local-flat-read
+                                   :route-dispatch false})
+                :remotes [:some-remote]
+                :send (fn [{:keys [some-remote]} cb]
+                        (cb (remote-parser {} some-remote))
+                        (close! c))}})
+        r (c/get-reconciler app)]
+    (is (= (om/gather-sends (#'om/to-env r)
+             (om/get-query (c/root-class app)) [:some-remote])
+           {:some-remote [(om/get-query Home)]}))
+    (c/mount! app nil)
+    (is (= (dissoc @(c/get-reconciler app) ::c/route) {:home/title :title
+                                                       :home/content :content}))
+    (c/set-route! app :about)
+    (is (= (om/gather-sends (#'om/to-env r)
+             (om/get-query (c/root-class app)) [:some-remote])
+           {:some-remote [(om/get-query About)]}))
+    (c/set-route! app :other)
+    (is (= (om/gather-sends (#'om/to-env r)
+             (om/get-query (c/root-class app)) [:some-remote])
+           {:some-remote [[:changed/key :foo :bar]]}))))

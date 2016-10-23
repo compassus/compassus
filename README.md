@@ -111,7 +111,15 @@ Creating a Compassus application is done by calling the `application` function. 
 
 #### Implementing the parser
 
-The parser is a required parameter to an Om Next reconciler. As such, a Compassus application also needs to have one, the advantage being that most of the plumbing has been done for you. The parser in a Compassus application will dispatch on the current route. Therefore, all that is required of a parser implementation is that it knows how to handle the routes that your application will transition to. An example is shown below with routes we have previously declared.
+The parser is a required parameter to an Om Next reconciler. As such, a Compassus
+application also needs to have one, with the added advantage that most of the plumbing
+has been done for you. The parser in a Compassus application will dispatch on the
+current route. Therefore, all that is required of a parser implementation is that
+it knows how to handle the routes that your application will transition to. An example
+is shown below with routes we have previously declared.
+
+For convenience, the parser's `env` argument contains a `:route` key with the current
+route of the Compassus application.
 
 ``` clojure
 ;; we declared routes for `:index` and `:about`.
@@ -130,7 +138,46 @@ The parser is a required parameter to an Om Next reconciler. As such, a Compassu
    :remote ...})
 ```
 
-For convenience, the parser's `env` argument contains a `:route` key with the current route of the Compassus application.
+In some cases you may not want the parser to dispatch on your application's current
+route, but instead on the query that its component declares. This is optionally
+possible by using the `compassus.core/parser` function. This function takes the
+exact same arguments as `om.next/parser`, along with an optional `:route-dispatch`
+key. If set to `false`, the parser will not dispatch on the current route, but instead
+on the query of the component pertaining to that route. Here's an example:
+
+``` clojure
+(defui Home
+  static om/IQuery
+  (query [this]
+    [{:menu (om/get-query Menu)}
+     {:footer (om/get-query Footer)}])
+  Object
+  (render [this]
+    ...))
+
+(def app
+  (compassus/application
+    {:routes {:index (compassus/index-route Index)}
+     :reconciler-opts {:state {}
+                       :parser (compassus/parser {:read read
+                                                  :route-dispatch false))}}))
+
+;; our parser won't dispatch on the `:index` key (the current route), but instead
+;; on the `:menu` and `:footer` keys that are part of `Home`'s query:
+
+(defmulti read om/dispatch)
+
+(defmethod read :menu
+  [env k params]
+  {:value ...
+   :remote ...})
+
+(defmethod read :footer
+  [env k params]
+  {:value ...
+   :remote ...})
+```
+
 
 #### Mixins
 
