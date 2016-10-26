@@ -259,7 +259,7 @@ as argument. Useful to perform any setup before the Compassus application mounts
 
 Example:
 
-``` clojure
+```clojure
 (compassus.core/will-mount
   (fn [self]
     ;; sets a property in the state of the root component
@@ -274,7 +274,7 @@ as argument. Useful to perform any setup after the Compassus application mounts.
 
 Example:
 
-```clojure`
+```clojure
 (compassus.core/did-mount
   (fn [self]
     (start-analytics!)))
@@ -288,7 +288,7 @@ as argument. Useful to perform any cleanup after the Compassus application unmou
 
 Example:
 
-``` clojure
+```clojure
 (compassus.core/will-unmount
   (fn [self]
     (stop-analytics!)))
@@ -300,7 +300,7 @@ Mixins are just data. Compassus built-in mixin constructors are just helpers aro
 assembling this data. For example, building a mixin to hook into the Compassus root
 component's query could also be done as shown below:
 
-``` clojure
+```clojure
 (def app
   (compassus/application
     {:routes ...
