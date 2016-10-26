@@ -72,7 +72,7 @@ key in the Compassus application configuration map:
 
 ```clojure
 (def app
-  (compasssus/application
+  (compassus/application
     ;; :index is the initial route of the application
     {:routes {:index Index
               :about About}}
@@ -318,7 +318,7 @@ these functions along with simple examples of their usage.
 Return the Compassus application's root class.
 
 ``` clojure
-(compasssus/root-class app)
+(compassus/root-class app)
 ```
 
 ##### **`mount!`**
