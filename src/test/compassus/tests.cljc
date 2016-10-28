@@ -822,6 +822,7 @@
                  (om/reconciler
                    {:state  (atom init-state)
                     :parser (c/parser {:read remote-mixins-read})
+                    :root-unmount (fn [_])
                     #?@(:cljs [:root-render (fn [c target]
                                               (.render shallow-renderer c))])})})
           r (c/get-reconciler app)

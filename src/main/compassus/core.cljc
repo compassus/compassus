@@ -6,7 +6,7 @@
                                :cljs :refer-macros) [ui invariant]]
             [om.util :as util]
             [om.next.impl.parser :as parser]
-            [compassus.util :refer [collect collect-1]]))
+            [compassus.util :refer [collect collect-1 get-prop-dispatch-key]]))
 
 (defn get-reconciler
   "Returns the Om Next reconciler for the given Compassus application."
@@ -286,6 +286,13 @@
             remotes)
       cb)))
 
+(defn- wrap-merge [merge-fn route->component mixin-data-keys]
+  (fn [reconciler state novelty query]
+    (let [{:keys [keys] :as merge-result} (merge-fn reconciler state novelty query)]
+      (cond-> merge-result
+        (some (set (clojure.core/keys route->component)) keys)
+        (update-in [:keys] (fnil conj []) ::route-data)))))
+
 (defn- assemble-compassus-reconciler
   [reconciler route->component index-route mixins]
   (let [{:keys [state parser migrate send]
@@ -294,17 +301,20 @@
         normalize? (and (:normalize cfg)
                         (not (:normalized @(:state reconciler))))
         route-info {::route index-route}
+        mixin-query (or (om/get-query (collect-1 :render mixins)) [])
         _ (if normalize?
             (let [merged-query (transduce (map om/get-query)
                                  (completing into)
-                                 (or (om/get-query (collect-1 :render mixins)) [])
+                                 mixin-query
                                  (vals route->component))]
               (reset! state (merge (om/tree->db merged-query @state true)
                               route-info))
               (swap! (:state reconciler) assoc :normalized true))
             (swap! state merge route-info))
         new-cfg (merge cfg
-                  {:migrate (make-migrate-fn migrate)}
+                  {:migrate (make-migrate-fn migrate)
+                   :merge (wrap-merge (:merge cfg) route->component
+                            (mapv get-prop-dispatch-key mixin-query))}
                   (when send
                     {:send (wrap-send send)}))]
     (assoc reconciler :config new-cfg)))
