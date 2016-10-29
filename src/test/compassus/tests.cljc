@@ -960,3 +960,40 @@
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])
            {:some-remote [[:changed/key :foo :bar]]}))))
+
+(defn compassus-16-read
+  [{:keys [state query target ast] :as env} k _]
+  (let [st @state]
+    (if (contains? st k)
+      {:value st}
+      {target true})))
+
+(deftest test-compassus-16
+  (let [app (c/application
+              {:routes {:index Home
+                        :about About}
+               :index-route :index
+               :reconciler (om/reconciler
+                             {:state  (atom {})})})
+        r (c/get-reconciler app)
+        merge-fn (-> r :config :merge)]
+    (is (= (:keys (merge-fn r @r {:index {:foo 42}} nil))
+           [:index ::c/route-data]))
+    (is (= (:keys (merge-fn r @r {:about {:foo 42}} nil))
+           [:about ::c/route-data])))
+  (let [app (c/application
+              {:routes {:index Home
+                        :about About}
+               :index-route :index
+               :reconciler (om/reconciler
+                             {:state (atom {})
+                              :parser (c/parser {:read compassus-16-read})
+                              :merge c/compassus-merge})})
+        r (c/get-reconciler app)
+        merge-fn (-> r :config :merge)]
+    (c/mount! app nil)
+    (is (= (:keys (merge-fn r @r {:index {:foo 42}} nil))
+           [:foo ::c/route-data]))
+    (c/set-route! app :about)
+    (is (= (:keys (merge-fn r @r {:about {:foo 42}} nil))
+           [:foo ::c/route-data]))))

@@ -8,9 +8,3 @@
 
 (defn collect-1 [key mixins]
   (first (keep key mixins)))
-
-(defn get-prop-dispatch-key [prop]
-  (cond-> prop
-    (or (not (om-util/ident? prop))
-        (= (second prop) '_))
-    ((comp :dispatch-key parser/expr->ast))))

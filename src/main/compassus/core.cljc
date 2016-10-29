@@ -6,7 +6,7 @@
                                :cljs :refer-macros) [ui invariant]]
             [om.util :as util]
             [om.next.impl.parser :as parser]
-            [compassus.util :refer [collect collect-1 get-prop-dispatch-key]]))
+            [compassus.util :refer [collect collect-1]]))
 
 (defn get-reconciler
   "Returns the Om Next reconciler for the given Compassus application."
@@ -286,11 +286,11 @@
             remotes)
       cb)))
 
-(defn- wrap-merge [merge-fn route->component mixin-data-keys]
+(defn- wrap-merge [merge-fn route->component]
   (fn [reconciler state novelty query]
-    (let [{:keys [keys] :as merge-result} (merge-fn reconciler state novelty query)]
-      (cond-> merge-result
-        (some (set (clojure.core/keys route->component)) keys)
+    (let [novelty-ks (into [] (remove symbol?) (keys novelty))]
+      (cond-> (merge-fn reconciler state novelty query)
+        (some (set (keys route->component)) novelty-ks)
         (update-in [:keys] (fnil conj []) ::route-data)))))
 
 (defn- assemble-compassus-reconciler
@@ -301,11 +301,10 @@
         normalize? (and (:normalize cfg)
                         (not (:normalized @(:state reconciler))))
         route-info {::route index-route}
-        mixin-query (or (om/get-query (collect-1 :render mixins)) [])
         _ (if normalize?
             (let [merged-query (transduce (map om/get-query)
                                  (completing into)
-                                 mixin-query
+                                 (or (om/get-query (collect-1 :render mixins)) [])
                                  (vals route->component))]
               (reset! state (merge (om/tree->db merged-query @state true)
                               route-info))
@@ -313,8 +312,7 @@
             (swap! state merge route-info))
         new-cfg (merge cfg
                   {:migrate (make-migrate-fn migrate)
-                   :merge (wrap-merge (:merge cfg) route->component
-                            (mapv get-prop-dispatch-key mixin-query))}
+                   :merge (wrap-merge (:merge cfg) route->component)}
                   (when send
                     {:send (wrap-send send)}))]
     (assoc reconciler :config new-cfg)))
