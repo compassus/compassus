@@ -225,14 +225,11 @@ Example:
       ;; call the given factory with props in the end
       (factory props))))
 
-(def wrapper (om/factory Wrapper))
-
 (def app
   (compassus/application
     {:routes ...
      :reconciler (om/reconciler ...)
-     :mixins [(compassus/wrap-render wrapper)]}))
-
+     :mixins [(compassus/wrap-render Wrapper)]}))
 
 ;; Example of a wrapper that implements `om.next/IQuery`
 (defui Wrapper
