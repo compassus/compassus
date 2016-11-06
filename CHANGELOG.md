@@ -6,6 +6,8 @@
 
 - The Om Next reconciler's `merge` function should queue `:compassus.core/route-data`
 for re-read if any route keys are present in the remote result ([#16](https://github.com/compassus/compassus/issues/16)).
+- The factory function passed to the wrapper component should not ignore its props argument
+([#19](https://github.com/compassus/compassus/issues/19)).
 
 ## [1.0.0-alpha1](https://github.com/anmonteiro/compassus/compare/0.2.1...1.0.0-alpha1) (2016-10-23)
 

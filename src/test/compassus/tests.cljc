@@ -730,7 +730,6 @@
               c (c/mount! app :target)]
           #?(:clj (p/-render c))
           (is (= (-> @parent-atom (get wrapper) om/react-type) root))
-          (is (= (-> @parent-atom (get Home) om/react-type) root))
           (om/remove-root! (c/get-reconciler app) :target)))))
   (testing "lifecycle mixins"
     (let [update-atom (atom {})
@@ -997,3 +996,30 @@
     (c/set-route! app :about)
     (is (= (:keys (merge-fn r @r {:about {:foo 42}} nil))
            [:foo ::c/route-data]))))
+
+(deftest test-compassus-19
+  (testing "wrapper mixin"
+    (let [wrapper (fn [{:keys [owner factory render props]}]
+                    (factory {:changed/props 42}))
+          #?@(:cljs [shallow-renderer (.createRenderer test-utils)])
+          app (c/application {:routes {:index Home}
+                              :index-route :index
+                              :mixins [(c/wrap-render wrapper)]
+                              :reconciler
+                              (om/reconciler
+                                {:state (atom init-state)
+                                 :parser (c/parser {:read app-read})
+                                 :root-unmount (fn [_])
+                                 #?@(:cljs [:root-render (fn [c target]
+                                                           (.render shallow-renderer c))])})})
+          r (c/get-reconciler app)
+          c (c/mount! app :target)
+          component #?(:clj  (p/-render c)
+                       :cljs (.getRenderOutput shallow-renderer))]
+      (is (= #?(:clj  (om/props component)
+                :cljs (om/unwrap (-> component .-props om/get-props)))
+             {:changed/props 42}))
+      (is (= #?(:clj  (om/depth component)
+                :cljs (-> component .-props (gobj/get "omcljs$depth")))
+             1))
+      (om/remove-root! (c/get-reconciler app) :target))))

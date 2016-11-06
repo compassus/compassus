@@ -60,19 +60,23 @@
               factory (get route->factory route)
               _ (invariant (some? factory)
                   (str "Trying to set route to " route " but one is not defined."))
-              route-component (factory route-data)]
+              parent @#'om/*parent*
+              depth @#'om/*depth*]
           (if-not (nil? wrapper)
             (let [props (cond->> {:owner   this
-                                 :factory (fn [_] route-component)
-                                 :props   route-data}
+                                  :factory (fn [props]
+                                             ;; the route-component needs to be a
+                                             ;; child of the root because of the
+                                             ;; query paths.
+                                             (binding [om/*parent* parent
+                                                       om/*depth* depth]
+                                               (factory props)))
+                                  :props   route-data}
                           (om/iquery? wrapper-class) (om/computed mixin-data))]
               (wrapper props))
-            route-component))))))
+            (factory route-data)))))))
 
 (defrecord ^:private CompassusApplication [config state])
-
-(alter-meta! #'->CompassusApplication assoc :private true)
-(alter-meta! #'map->CompassusApplication assoc :private true)
 
 (defn application?
   "Returns true if x is a Compassus application"
