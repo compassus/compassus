@@ -495,6 +495,7 @@ There are also some devcards examples [here](https://compassus.github.io/compass
 ## Companies using Compassus
 
 - [CircleCI](https://circleci.com/), source [here](https://github.com/circleci/frontend)
+- [Funding Circle](https://www.fundingcircle.com/)
 
 ## Copyright & License
 
