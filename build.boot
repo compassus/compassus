@@ -3,7 +3,7 @@
 (set-env!
  :source-paths    #{"src/main"}
  :resource-paths  #{"resources"}
- :dependencies '[[org.clojure/clojure         "1.9.0-alpha13"  :scope "provided"]
+ :dependencies '[[org.clojure/clojure         "1.9.0-alpha14"  :scope "provided"]
                  [org.clojure/clojurescript   "1.9.293"        :scope "provided"]
                  [org.omcljs/om               "1.0.0-alpha47"  :scope "provided"
                   :exclusions [cljsjs/react]]
@@ -11,12 +11,12 @@
                  [cljsjs/react-with-addons    "15.3.1-0"       :scope "test"]
                  [cljsjs/react-dom            "15.3.1-0"       :scope "test"
                   :exclusions [cljsjs/react]]
-                 [com.cognitect/transit-clj   "0.8.290"        :scope "test"]
+                 [com.cognitect/transit-clj   "0.8.293"        :scope "test"]
                  [org.clojure/core.async      "0.2.395"        :scope "test"]
                  [devcards                    "0.2.2"          :scope "test"
                   :exclusions [cljsjs/react cljsjs/react-dom]]
                  [com.cemerick/piggieback     "0.2.1"          :scope "test"]
-                 [pandeiro/boot-http          "0.7.3"          :scope "test"]
+                 [pandeiro/boot-http          "0.7.6"          :scope "test"]
                  [adzerk/boot-cljs            "1.7.228-2"      :scope "test"]
                  [adzerk/boot-cljs-repl       "0.3.3"          :scope "test"]
                  [adzerk/boot-test            "1.1.2"          :scope "test"]
