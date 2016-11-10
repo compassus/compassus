@@ -2,6 +2,8 @@
 
 ## [master](https://github.com/anmonteiro/compassus/compare/1.0.0-alpha1...HEAD) (unreleased)
 
+## [1.0.0-alpha2](https://github.com/anmonteiro/compassus/compare/1.0.0-alpha1...1.0.0-alpha2) (2016-11-10)
+
 ### Bug fixes
 
 - The Om Next reconciler's `merge` function should queue `:compassus.core/route-data`
