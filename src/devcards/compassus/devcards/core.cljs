@@ -259,7 +259,7 @@
                                        :mutate notes-mutate})})}))
 
 (defcard normalization-example
-  "An example without normalization."
+  "An example with normalization."
   (dom-node
     (fn [_ node]
       (c/mount! notes-app node))))
