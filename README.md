@@ -41,6 +41,8 @@ Maven dependency information:
 </dependency>
 ```
 
+There is also a Boot/Lein [template](https://github.com/compassus/oriens) that provides a minimal setup to help get started.
+
 ## Guide
 
 To get started, require Compassus somewhere in your project.
@@ -434,8 +436,14 @@ Below are two examples, one using [Bidi](https://github.com/juxt/bidi) and
 
 (declare app)
 
+(defn update-route!
+  [{:keys [handler] :as route}]
+  (let [current-route (compassus/current-route app)]
+    (when (not= handler current-route)
+      (compassus/set-route! app handler))))
+
 (def history
-  (pushy/pushy #(compassus/set-route! app (:handler %))
+  (pushy/pushy update-route!
     (partial bidi/match-route bidi-routes)))
 
 (def app
