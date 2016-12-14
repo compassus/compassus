@@ -23,8 +23,6 @@ Read the [announcement blog post](https://anmonteiro.com/2016/06/the-quest-for-a
 
 ## Installation
 
-### Stable
-
 Leiningen dependency information:
 
 ```clojure
@@ -41,7 +39,10 @@ Maven dependency information:
 </dependency>
 ```
 
-There is also a Boot/Lein [template](https://github.com/compassus/oriens) that provides a minimal setup to help get started.
+Template:
+
+There is a Boot / Leiningen [template](https://github.com/compassus/oriens) that
+provides the minimum boilerplate to help you get started with a Compassus project.
 
 ## Guide
 
