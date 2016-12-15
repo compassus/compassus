@@ -1,7 +1,8 @@
 (ns compassus.tests
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go]]))
   (:require #?@(:cljs [[cljsjs.react]
-                       [goog.object :as gobj]])
+                       [goog.object :as gobj]]
+                :clj [[om.dom :as dom]])
             [clojure.core.async :refer [<! close! chan take! #?@(:clj [go <!!])]]
             [clojure.test :refer [deftest testing is are use-fixtures #?(:cljs async)]]
             [om.next :as om :refer [defui ui]]
@@ -26,7 +27,10 @@
 (defui Home
   static om/IQuery
   (query [this]
-    [:home/title :home/content]))
+    [:home/title :home/content])
+  #?@(:clj [Object
+            (render [this]
+              (dom/div nil "Hello, home!"))]))
 
 (defui About
   static om/IQuery
@@ -70,6 +74,11 @@
    :cljs (use-fixtures :each
            {:before set-app!
             :after unset-app!}))
+#?(:clj
+   (deftest render-to-str-test
+     (let [a (compassus.core/mount! *app* nil)]
+       (is (= (dom/render-to-str a)
+              "<div data-reactroot=\"\" data-reactid=\"1\" data-react-checksum=\"1270092644\">Hello, home!</div>")))))
 
 (deftest test-create-app
   (is (instance? compassus.core.CompassusApplication *app*))
