@@ -11,7 +11,7 @@
                  [cljsjs/react-with-addons    "15.3.1-0"       :scope "test"]
                  [cljsjs/react-dom            "15.3.1-0"       :scope "test"
                   :exclusions [cljsjs/react]]
-                 [com.cognitect/transit-clj   "0.8.293"        :scope "test"]
+                 [com.cognitect/transit-clj   "0.8.297"        :scope "test"]
                  [org.clojure/core.async      "0.2.395"        :scope "test"]
                  [devcards                    "0.2.2"          :scope "test"
                   :exclusions [cljsjs/react cljsjs/react-dom]]
@@ -20,13 +20,13 @@
                  [adzerk/boot-cljs            "1.7.228-2"      :scope "test"]
                  [adzerk/boot-cljs-repl       "0.3.3"          :scope "test"]
                  [adzerk/boot-test            "1.1.2"          :scope "test"]
-                 [crisptrutski/boot-cljs-test "0.2.2-SNAPSHOT" :scope "test"]
+                 [crisptrutski/boot-cljs-test "0.3.0" :scope "test"]
                  [adzerk/boot-reload          "0.4.13"         :scope "test"]
                  [adzerk/bootlaces            "0.1.13"         :scope "test"]
                  [org.clojure/tools.nrepl     "0.2.12"         :scope "test"]
                  [org.clojure/tools.namespace "0.3.0-alpha3"   :scope "test"]
                  [weasel                      "0.7.0"          :scope "test"]
-                 [boot-codox                  "0.10.1"         :scope "test"]])
+                 [boot-codox                  "0.10.2"         :scope "test"]])
 
 (require
  '[adzerk.boot-cljs      :refer [cljs]]
