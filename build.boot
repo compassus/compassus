@@ -118,7 +118,11 @@
   (cljs :optimizations :advanced
         :ids #{"js/devcards"}
         :compiler-options {:devcards true
-                           :elide-asserts true}))
+                           :elide-asserts true
+                           :parallel-build true
+                           :verbose true
+                           :compiler-stats true
+                           :closure-defines {'goog/DEBUG false}}))
 
 (deftask release-gh-pages []
   (comp
