@@ -309,7 +309,7 @@
 (defui Wrapper
   Object
   (render [this]
-    (let [{:keys [owner factory props]} (om/props this)
+    (let [{:keys [owner factory props]} (om/get-computed this)
           route (c/current-route this)]
       (dom/div #js {:style #js {:margin "0 auto"
                                 :height 250

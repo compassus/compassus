@@ -202,10 +202,9 @@ the wrapper, e.g. the current logged in user and such.
 
 The wrapper will be passed a map with the keys below. If the wrapper is a simple
 function, the map will be passed as argument. If it is a component class, the map
-will be in the component's props (accessible through `om.next/props`). If the wrapper
-implements `om.next/IQuery`, its props will be the data that the query asks for.
-You'll find the map with the keys below in the component's computed props, accessible
-through `om.next/get-computed`.
+will be in the component's computed props (accessible through `om.next/get-computed`).
+If the wrapper implements `om.next/IQuery`, its props will be the data that the query
+asks for.
 
   - :owner   - the parent component instance
   - :factory - the component factory for the current route

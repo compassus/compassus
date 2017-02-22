@@ -678,7 +678,7 @@
 (deftest test-mixins
   (testing "wrapper mixin"
     (let [update-atom (atom {})
-          wrapper (fn [{:keys [owner factory render props]}]
+          wrapper (fn [{:keys [owner factory props]}]
                     (swap! update-atom assoc :wrapped-render true
                       :props props)
                     (factory props))
@@ -703,7 +703,7 @@
           wrapper (ui
                     Object
                     (render [this]
-                      (let [{:keys [owner factory render props]} (om/props this)]
+                      (let [{:keys [owner factory props]} (om/get-computed this)]
                         (factory props))))]
       (with-redefs [om/factory (fn [class]
                                  (fn self
@@ -736,8 +736,14 @@
                                      #?@(:cljs [:root-render (fn [c target]
                                                                (.render shallow-renderer c))])})})
               root (c/root-class app)
-              c (c/mount! app :target)]
-          #?(:clj (p/-render c))
+              c (c/mount! app :target)
+              #?@(:clj [rendered (p/-render c)])
+              wrapper-props #?(:clj  (:omcljs$value (p/-props rendered))
+                               :cljs (-> (.getRenderOutput shallow-renderer)
+                                         (gobj/get "props") om/get-props om/unwrap))]
+          (is (= (-> wrapper-props om/get-computed :props)
+                 {:home/title "Home page"
+                  :home/content "Lorem ipsum dolor sit amet."}))
           (is (= (-> @parent-atom (get wrapper) om/react-type) root))
           (om/remove-root! (c/get-reconciler app) :target)))))
   (testing "lifecycle mixins"
@@ -797,8 +803,8 @@
     '[{:foo ?foo}])
   Object
   (render [this]
-    (let [{:keys [props owner factory]} (om/props this)]
-      (swap! update-atom :assoc :props (om/props this))
+    (let [{:keys [props owner factory]} (om/get-computed this)]
+      (swap! update-atom :assoc :props (om/get-computed this))
       (factory props))))
 
 (deftest test-iquery-wrapper
@@ -1032,3 +1038,36 @@
                 :cljs (-> component .-props (gobj/get "omcljs$depth")))
              1))
       (om/remove-root! (c/get-reconciler app) :target))))
+
+(deftest test-compassus-25
+  (testing "wrapper updates"
+    (let [wrapper (ui
+                    Object
+                    (render [this]
+                      (let [{:keys [factory props] :as computed} (om/get-computed this)]
+                        (swap! update-atom assoc :computed computed)
+                        (factory props))))
+          #?@(:cljs [shallow-renderer (.createRenderer test-utils)])
+          app (c/application
+                {:routes {:index Home}
+                 :mixins [(c/wrap-render wrapper)]
+                 :reconciler
+                 (om/reconciler
+                   {:state  (atom init-state)
+                    :parser (c/parser {:read remote-mixins-read})
+                    :root-unmount (fn [_])
+                    #?@(:cljs [:root-render (fn [c target]
+                                              (.render shallow-renderer c))])})})
+          r (c/get-reconciler app)
+          root (c/root-class app)
+          c (c/mount! app :target)
+          #?@(:clj [wrapper (p/-render c)])
+          wrapper-props #?(:clj  (:omcljs$value (p/-props wrapper))
+                           :cljs (-> (.getRenderOutput shallow-renderer)
+                                   (gobj/get "props") om/get-props om/unwrap))]
+      (is (every? (partial contains? (om/get-computed wrapper-props)) [:owner :factory :props]))
+      (is (= (-> wrapper-props om/get-computed :props)
+                 {:home/title "Home page"
+                  :home/content "Lorem ipsum dolor sit amet."}))
+      (is (= (dissoc wrapper-props ::om/computed)
+             (om/get-computed wrapper-props))))))

@@ -63,16 +63,20 @@
               parent @#'om/*parent*
               depth @#'om/*depth*]
           (if-not (nil? wrapper)
-            (let [props (cond->> {:owner   this
-                                  :factory (fn [props]
-                                             ;; the route-component needs to be a
-                                             ;; child of the root because of the
-                                             ;; query paths.
-                                             (binding [om/*parent* parent
-                                                       om/*depth* depth]
-                                               (factory props)))
-                                  :props   route-data}
-                          (om/iquery? wrapper-class) (om/computed mixin-data))]
+            (let [wrapper-props {:owner   this
+                                 :factory (fn [props]
+                                            ;; the route-component needs to be a
+                                            ;; child of the root because of the
+                                            ;; query paths.
+                                            (binding [om/*parent* parent
+                                                      om/*depth* depth]
+                                              (factory props)))
+                                 :props   route-data}
+                  props (om/computed
+                          (if (om/iquery? wrapper-class)
+                            mixin-data
+                            wrapper-props)
+                          wrapper-props)]
               (wrapper props))
             (factory route-data)))))))
 
