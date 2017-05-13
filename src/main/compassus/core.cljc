@@ -191,17 +191,17 @@
   (let [query (infer-query env route route-dispatch)
         ret (user-parser env query target)]
     (when-not (empty? ret)
-      {target (parser/query->ast ret)})))
+      {target (assoc ast :query ret)})))
 
 (defmethod read [nil ::mixin-data]
   [{:keys [query user-parser] :as env} key params]
   {:value (user-parser env query)})
 
 (defmethod read [:default ::mixin-data]
-  [{:keys [target query user-parser] :as env} key params]
+  [{:keys [target ast query user-parser] :as env} key params]
   (let [ret (user-parser env query target)]
     (when-not (empty? ret)
-      {target (parser/query->ast ret)})))
+      {target (assoc ast :query ret)})))
 
 (defmethod read [nil :default]
   [{:keys [ast user-parser] :as env} key params]
@@ -214,7 +214,7 @@
   (let [query [(parser/ast->expr ast)]
         ret (user-parser env query target)]
     (when-not (empty? ret)
-      {target (parser/query->ast ret)})))
+      {target (assoc ast :query ret)})))
 
 (defmulti ^:private mutate dispatch)
 
@@ -234,7 +234,7 @@
   (let [tx [(om/ast->query ast)]
         ret (user-parser env tx target)]
     (when-not (empty? ret)
-      {target (parser/query->ast ret)})))
+      {target (parser/expr->ast (first ret))})))
 
 (defmethod mutate [:default 'compassus.core/set-route!]
   [{:keys [state] :as env} key {:keys [route] :as params}]
@@ -262,8 +262,19 @@
   "
   [{:keys [route-dispatch] :or {route-dispatch true} :as opts}]
   (let [user-parser (om/parser (dissoc opts :route-dispatch))]
-    (om/parser {:read   (generate-parser-fn read user-parser route-dispatch)
-                :mutate (generate-parser-fn mutate user-parser route-dispatch)})))
+    (let [om-parser (om/parser {:read (generate-parser-fn read user-parser route-dispatch)
+                                :mutate (generate-parser-fn mutate user-parser route-dispatch)})]
+      (fn self
+        ([env query] (self env query nil))
+        ([env query target]
+         (let [result (om-parser env query target)]
+           (if target
+             (reduce (fn [q expr]
+                       (if (util/join? expr)
+                         (into q (util/join-value expr))
+                         (conj q expr)))
+                     [] result)
+             result)))))))
 
 (defn compassus-merge
   "Helper function to replace `om.next/default-merge`. Unwraps the current route
@@ -285,14 +296,6 @@
     ([app-state-pure query tempids id-key]
      (merge (select-keys app-state-pure [::route])
        (migrate app-state-pure query tempids id-key)))))
-
-(defn- wrap-send [send]
-  (fn [remotes cb]
-    (send (into {}
-            (map (fn [[k v]]
-                   [k (into [] (mapcat identity) v)]))
-            remotes)
-      cb)))
 
 (defn- wrap-merge [merge-fn route->component]
   (fn [reconciler state novelty query]
@@ -320,9 +323,7 @@
             (swap! state merge route-info))
         new-cfg (merge cfg
                   {:migrate (make-migrate-fn migrate)
-                   :merge (wrap-merge (:merge cfg) route->component)}
-                  (when send
-                    {:send (wrap-send send)}))]
+                   :merge (wrap-merge (:merge cfg) route->component)})]
     (assoc reconciler :config new-cfg)))
 
 (defn application
