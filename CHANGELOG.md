@@ -6,6 +6,7 @@
 
 - The location of owner, factory and props in wrappers should be the same whether
 components implement `IQuery` or not ([#25](https://github.com/compassus/compassus/issues/25)).
+- Don't wrap the return of the parser in an extra vector ([#26](https://github.com/compassus/compassus/pull/26)).
 
 ## [1.0.0-alpha2](https://github.com/anmonteiro/compassus/compare/1.0.0-alpha1...1.0.0-alpha2) (2016-11-10)
 

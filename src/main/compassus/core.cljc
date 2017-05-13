@@ -261,20 +261,19 @@
                        route. Defaults to `true`.
   "
   [{:keys [route-dispatch] :or {route-dispatch true} :as opts}]
-  (let [user-parser (om/parser (dissoc opts :route-dispatch))]
-    (let [om-parser (om/parser {:read (generate-parser-fn read user-parser route-dispatch)
-                                :mutate (generate-parser-fn mutate user-parser route-dispatch)})]
-      (fn self
-        ([env query] (self env query nil))
-        ([env query target]
-         (let [result (om-parser env query target)]
-           (if target
-             (reduce (fn [q expr]
-                       (if (util/join? expr)
-                         (into q (util/join-value expr))
-                         (conj q expr)))
-                     [] result)
-             result)))))))
+  (let [user-parser (om/parser (dissoc opts :route-dispatch))
+        parser (om/parser {:read (generate-parser-fn read user-parser route-dispatch)
+                           :mutate (generate-parser-fn mutate user-parser route-dispatch)})]
+    (fn self
+      ([env query] (self env query nil))
+      ([env query target]
+       (cond->> (parser env query target)
+         (not (nil? target))
+         (into [] (mapcat
+                    (fn [expr]
+                      (if (util/join? expr)
+                        (util/join-value expr)
+                        [expr])))))))))
 
 (defn compassus-merge
   "Helper function to replace `om.next/default-merge`. Unwraps the current route
