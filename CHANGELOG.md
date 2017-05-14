@@ -1,6 +1,8 @@
 # Changelog
 
-## [master](https://github.com/anmonteiro/compassus/compare/1.0.0-alpha2...HEAD) (unreleased)
+## [master](https://github.com/anmonteiro/compassus/compare/1.0.0-alpha3...HEAD) (unreleased)
+
+## [1.0.0-alpha3](https://github.com/anmonteiro/compassus/compare/1.0.0-alpha2...1.0.0-alpha3) (2017-05-14)
 
 ### Changes
 
