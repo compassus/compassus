@@ -6,6 +6,8 @@ general:
 machine:
   java:
     version: oraclejdk8
+  node:
+    version: 6.1.0
 
 dependencies:
   pre:
