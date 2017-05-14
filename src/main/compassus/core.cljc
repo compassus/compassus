@@ -23,62 +23,64 @@
      :cljs (boolean (.. x -prototype -om$isComponent))))
 
 (defn- make-root-class
-  [{:keys [routes mixins]}]
-  (let [route->query (into {}
-                       (map (fn [[route class]]
-                              (when (om/iquery? class)
-                                [route (om/get-query class)])))
-                       routes)
-        route->factory (zipmap (keys routes)
-                               (map om/factory (vals routes)))
-        will-mount (collect :will-mount mixins)
-        did-mount (collect :did-mount mixins)
-        will-unmount (collect :will-unmount mixins)
-        wrapper-class (collect-1 :render mixins)
-        wrapper (when-not (nil? wrapper-class)
-                  (cond-> wrapper-class
-                    (om-class? wrapper-class) om/factory))
-        query (cond-> [::route {::route-data route->query}]
-                (om/iquery? wrapper-class)
-                (conj {::mixin-data (om/get-query wrapper-class)}))]
-    (ui
-      static om/IQuery
-      (query [this]
-        query)
-      Object
-      (componentWillMount [this]
-        (doseq [f will-mount]
-          (f this)))
-      (componentDidMount [this]
-        (doseq [f did-mount]
-          (f this)))
-      (componentWillUnmount [this]
-        (doseq [f will-unmount]
-          (f this)))
-      (render [this]
-        (let [{:keys [::route ::route-data ::mixin-data] :as props} (om/props this)
-              factory (get route->factory route)
-              _ (invariant (some? factory)
-                  (str "Trying to set route to " route " but one is not defined."))
-              parent @#'om/*parent*
-              depth @#'om/*depth*]
-          (if-not (nil? wrapper)
-            (let [wrapper-props {:owner   this
-                                 :factory (fn [props]
-                                            ;; the route-component needs to be a
-                                            ;; child of the root because of the
-                                            ;; query paths.
-                                            (binding [om/*parent* parent
-                                                      om/*depth* depth]
-                                              (factory props)))
-                                 :props   route-data}
-                  props (om/computed
-                          (if (om/iquery? wrapper-class)
-                            mixin-data
-                            wrapper-props)
-                          wrapper-props)]
-              (wrapper props))
-            (factory route-data)))))))
+  [{:keys [will-mount did-mount will-unmount wrapper
+           wrapper-class route->factory query] :as root-class-props}]
+  (let [root-class
+        (ui
+          static om/IQuery
+          (query [this]
+            #?(:clj
+               (if (om/component? this)
+                 (-> this om/get-reconciler :state deref :compassus$props :query)
+                 (-> this meta :compassus$props :query))
+               :cljs query))
+          Object
+          (componentWillMount [this]
+            (let [will-mount #?(:clj (-> (om/get-reconciler this)
+                                       :state deref :compassus$props :will-mount)
+                                :cljs will-mount)]
+              (doseq [f will-mount]
+                (f this))))
+          (componentDidMount [this]
+            (let [did-mount #?(:clj (-> (om/get-reconciler this)
+                                      :state deref :compassus$props :did-mount)
+                               :cljs did-mount)]
+              (doseq [f did-mount]
+                (f this))))
+          (componentWillUnmount [this]
+            (let [will-unmount #?(:clj (-> (om/get-reconciler this)
+                                         :state deref :compassus$props :will-unmount)
+                                  :cljs will-unmount)]
+              (doseq [f will-unmount]
+                (f this))))
+          (render [this]
+            (let [#?@(:clj [{:keys [wrapper route->factory wrapper-class]}
+                            (-> (om/get-reconciler this) :state deref :compassus$props)])
+                  {:keys [::route ::route-data ::mixin-data] :as props} (om/props this)
+                  factory (get route->factory route)
+                  _ (invariant (some? factory)
+                      (str "Trying to set route to " route " but one is not defined."))
+                  parent @#'om/*parent*
+                  depth @#'om/*depth*]
+              (if-not (nil? wrapper)
+                (let [wrapper-props {:owner   this
+                                     :factory (fn [props]
+                                                ;; the route-component needs to be a
+                                                ;; child of the root because of the
+                                                ;; query paths.
+                                                (binding [om/*parent* parent
+                                                          om/*depth* depth]
+                                                  (factory props)))
+                                     :props   route-data}
+                      props (om/computed
+                              (if (om/iquery? wrapper-class)
+                                mixin-data
+                                wrapper-props)
+                              wrapper-props)]
+                  (wrapper props))
+                (factory route-data)))))]
+    #?(:clj (vary-meta root-class assoc :compassus$props root-class-props)
+       :cljs root-class)))
 
 (defrecord ^:private CompassusApplication [config state])
 
@@ -303,8 +305,28 @@
         (some (set (keys route->component)) novelty-ks)
         (update-in [:keys] (fnil conj []) ::route-data)))))
 
+(defn- root-class-props [{:keys [routes mixins]}]
+  (let [route->query (into {}
+                       (map (fn [[route class]]
+                              (when (om/iquery? class)
+                                [route (om/get-query class)])))
+                       routes)
+        wrapper-class (collect-1 :render mixins)]
+    {:route->factory (zipmap (keys routes)
+                       (map om/factory (vals routes)))
+     :will-mount (collect :will-mount mixins)
+     :did-mount (collect :did-mount mixins)
+     :will-unmount (collect :will-unmount mixins)
+     :wrapper-class wrapper-class
+     :wrapper (when-not (nil? wrapper-class)
+                (cond-> wrapper-class
+                  (om-class? wrapper-class) om/factory))
+     :query (cond-> [::route {::route-data route->query}]
+              (om/iquery? wrapper-class)
+              (conj {::mixin-data (om/get-query wrapper-class)}))}))
+
 (defn- assemble-compassus-reconciler
-  [reconciler route->component index-route mixins]
+  [reconciler route->component index-route mixins root-class-props]
   (let [{:keys [state parser migrate send]
          :or {migrate #'om/default-migrate}
          :as cfg} (:config reconciler)
@@ -323,6 +345,7 @@
         new-cfg (merge cfg
                   {:migrate (make-migrate-fn migrate)
                    :merge (wrap-merge (:merge cfg) route->component)})]
+    #?(:clj (swap! (:state reconciler) merge {:compassus$props root-class-props}))
     (assoc reconciler :config new-cfg)))
 
 (defn application
@@ -361,13 +384,14 @@
   "
   [{:keys [routes index-route mixins reconciler] :as opts}]
   (let [index-route (or index-route (ffirst routes))
+        root-class-props (root-class-props opts)
         reconciler (assemble-compassus-reconciler reconciler routes
-                     index-route mixins)]
+                     index-route mixins root-class-props)]
     (CompassusApplication.
       {:route->component routes
        :mixins           mixins
        :reconciler       reconciler
-       :root-class       (make-root-class opts)}
+       :root-class       (make-root-class root-class-props)}
       (atom {}))))
 
 ;; =============================================================================

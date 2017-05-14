@@ -1,6 +1,7 @@
 (ns compassus.tests
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go]]))
   (:require #?@(:cljs [[cljsjs.react]
+                       [cljsjs.react.dom]
                        [goog.object :as gobj]]
                 :clj [[om.dom :as dom]])
             [clojure.core.async :refer [<! close! chan take! #?@(:clj [go <!!])]]
@@ -95,8 +96,9 @@
      :clj  (is (string? (-> (c/root-class *app*) meta :component-name)))))
 
 (deftest test-make-root-class
-  (let [root (#'c/make-root-class {:routes {:index Home
-                                            :about About}})]
+  (let [root (#'c/make-root-class (#'c/root-class-props
+                                    {:routes {:index Home
+                                              :about About}}))]
     (is (fn? root))
     #?(:cljs (is (true? (.. root -prototype -om$isComponent)))
        :clj  (is (string? (-> root meta :component-name))))
@@ -738,13 +740,16 @@
               root (c/root-class app)
               c (c/mount! app :target)
               #?@(:clj [rendered (p/-render c)])
-              wrapper-props #?(:clj  (:omcljs$value (p/-props rendered))
+              wrapper-props #?(:clj  (-> rendered :props :omcljs$value)
                                :cljs (-> (.getRenderOutput shallow-renderer)
                                          (gobj/get "props") om/get-props om/unwrap))]
           (is (= (-> wrapper-props om/get-computed :props)
                  {:home/title "Home page"
                   :home/content "Lorem ipsum dolor sit amet."}))
-          (is (= (-> @parent-atom (get wrapper) om/react-type) root))
+          (let [wrapper-parent-class (-> @parent-atom (get wrapper) om/react-type)]
+            (is #?(:cljs (= wrapper-parent-class root)
+                   :clj (= (-> wrapper-parent-class meta :component-name)
+                           (-> root meta :component-name)))))
           (om/remove-root! (c/get-reconciler app) :target)))))
   (testing "lifecycle mixins"
     (let [update-atom (atom {})
@@ -843,7 +848,7 @@
           root (c/root-class app)
           c (c/mount! app :target)
           #?@(:clj [wrapper (p/-render c)])
-          wrapper-props #?(:clj  (:omcljs$value (p/-props wrapper))
+          wrapper-props #?(:clj  (-> wrapper :props :omcljs$value)
                            :cljs (-> (.getRenderOutput shallow-renderer)
                                    (gobj/get "props") om/get-props om/unwrap))]
       (is (every? (partial contains? (om/get-computed wrapper-props)) [:owner :factory :props]))
@@ -1062,7 +1067,7 @@
           root (c/root-class app)
           c (c/mount! app :target)
           #?@(:clj [wrapper (p/-render c)])
-          wrapper-props #?(:clj  (:omcljs$value (p/-props wrapper))
+          wrapper-props #?(:clj  (-> wrapper :props :omcljs$value)
                            :cljs (-> (.getRenderOutput shallow-renderer)
                                    (gobj/get "props") om/get-props om/unwrap))]
       (is (every? (partial contains? (om/get-computed wrapper-props)) [:owner :factory :props]))
