@@ -182,40 +182,40 @@
   {:value (get @state key)})
 
 (defmethod read [nil ::route-data]
-  [{:keys [route user-parser route-dispatch] :as env} key params]
+  [{:keys [route user-parser route-dispatch] :as env} _ _]
   (let [query (infer-query env route route-dispatch)
         ret (user-parser env query)]
     {:value (cond-> ret
               route-dispatch (get route))}))
 
 (defmethod read [:default ::route-data]
-  [{:keys [target ast route user-parser route-dispatch] :as env} key params]
+  [{:keys [target ast route user-parser route-dispatch] :as env} _ _]
   (let [query (infer-query env route route-dispatch)
         ret (user-parser env query target)]
     (when-not (empty? ret)
       {target (assoc ast :query ret)})))
 
 (defmethod read [nil ::mixin-data]
-  [{:keys [query user-parser] :as env} key params]
+  [{:keys [query user-parser] :as env} _ _]
   {:value (user-parser env query)})
 
 (defmethod read [:default ::mixin-data]
-  [{:keys [target ast query user-parser] :as env} key params]
+  [{:keys [target ast query user-parser] :as env} _ _]
   (let [ret (user-parser env query target)]
     (when-not (empty? ret)
       {target (assoc ast :query ret)})))
 
 (defmethod read [nil :default]
-  [{:keys [ast user-parser] :as env} key params]
+  [{:keys [ast user-parser] :as env} _ _]
   (let [query [(parser/ast->expr ast)]
         ret (user-parser env query)
-        k  (cond-> (:key ast)
-            (util/unique-ident? (:key ast))
-            first)]
-    {:value (get ret k)}))
+        key (:key ast)
+        key (cond-> key
+              (util/unique-ident? key) first)]
+    {:value (get ret key)}))
 
 (defmethod read [:default :default]
-  [{:keys [target ast route user-parser] :as env} key params]
+  [{:keys [target ast route user-parser] :as env} _ _]
   (let [query [(parser/ast->expr ast)]
         ret (user-parser env query target)]
     (when-not (empty? ret)
@@ -235,14 +235,14 @@
      :action #(or result (throw error))}))
 
 (defmethod mutate [:default :default]
-  [{:keys [target ast user-parser] :as env} key params]
+  [{:keys [target ast user-parser] :as env} _ _]
   (let [tx [(om/ast->query ast)]
         ret (user-parser env tx target)]
     (when-not (empty? ret)
       {target (parser/expr->ast (first ret))})))
 
 (defmethod mutate [:default 'compassus.core/set-route!]
-  [{:keys [state] :as env} key {:keys [route] :as params}]
+  [{:keys [state] :as env} _ {:keys [route] :as params}]
   (let [params (dissoc params :route)]
     {:value {:keys (into [::route ::route-data] (keys params))}
      :action #(swap! state merge {::route route} params)}))

@@ -6,13 +6,16 @@
 
 - The location of owner, factory and props in wrappers should be the same whether
 components implement `IQuery` or not ([#25](https://github.com/compassus/compassus/issues/25)).
-- Don't wrap the return of the parser in an extra vector ([#26](https://github.com/compassus/compassus/pull/26)).
+- Don't wrap the return of the parser in an extra vector ([@Peeja](https://github.com/Peeja)
+in [#26](https://github.com/compassus/compassus/pull/26)).
 
 ### Bug fixes
 
 - Make the (Clojure) server-side rendering code work with Om 1.0.0-alpha48 ([#28](https://github.com/compassus/compassus/issues/28)).
 The fix to ([OM-842](https://github.com/omcljs/om/issues/842)) made Compassus incompatible
 with the server-side rendering code.
+- Fix reads against idents and links in the join key ([@matthavener](https://github.com/matthavener)
+in [#27](https://github.com/compassus/compassus/pull/27)).
 
 ## [1.0.0-alpha2](https://github.com/anmonteiro/compassus/compare/1.0.0-alpha1...1.0.0-alpha2) (2016-11-10)
 
