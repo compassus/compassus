@@ -239,6 +239,28 @@
     (is (= (get-in @r [:user/by-id 1])
            {:id 1 :name "Bob"}))))
 
+(defn ident-read
+  [{:keys [state query ast]} k _]
+  (let [st @state]
+    (case k
+          :user/by-id
+          {:value (om/db->tree query (get-in st (:key ast)) st)}
+          {:value (om/db->tree query (get st k) st)})))
+
+(deftest test-pathopt-ident-reads
+  (let [app (c/application {:routes {:users UserList}
+                            :reconciler (om/reconciler
+                                          {:state users-init-state
+                                           :parser (c/parser {:read ident-read})
+                                           :pathopt true})})
+        r (c/get-reconciler app)
+        p (-> r :config :parser)]
+    (c/mount! app nil)
+    (is (= {[:user/by-id 1] {:id 1 :name "Bob"}}
+           (p (#'om/to-env r) [{[:user/by-id 1] (om/get-query User)}])))
+    (is (= {:users/list [{:id 0 :name "Alice"} {:id 1 :name "Bob"}]}
+           (p (#'om/to-env r) [{[:users/list '_] (om/get-query User)}])))))
+
 (defmulti local-parser-read om/dispatch)
 (defmethod local-parser-read :index
   [{:keys [state query target ast] :as env} _ _]

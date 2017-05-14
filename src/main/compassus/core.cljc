@@ -208,8 +208,11 @@
 (defmethod read [nil :default]
   [{:keys [ast user-parser] :as env} key params]
   (let [query [(parser/ast->expr ast)]
-        ret (user-parser env query)]
-    {:value (get ret key)}))
+        ret (user-parser env query)
+        k  (cond-> (:key ast)
+            (util/unique-ident? (:key ast))
+            first)]
+    {:value (get ret k)}))
 
 (defmethod read [:default :default]
   [{:keys [target ast route user-parser] :as env} key params]
