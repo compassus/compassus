@@ -285,13 +285,21 @@
    from the remote response and merges that into the state instead."
   [reconciler state res query]
   (let [route (get state ::route)
-        mutation? (symbol? (ffirst res))
-        query' (if-not mutation?
-                 (get (first query) route)
-                 query)]
+        read-response? (some (complement symbol?) (keys res))
+        query' (cond->> query
+                 (and (some? query) read-response?)
+                 (into [] (mapcat (fn [expr]
+                                    (cond-> expr
+                                      (and (util/join? expr)
+                                        (#?(:clj identical?
+                                            :cljs keyword-identical?)
+                                          (util/join-key expr) route))
+                                      util/join-value)))))]
     (om/default-merge reconciler state
-      (cond-> res
-        (not mutation?) (get route)) query')))
+      (if read-response?
+        (merge (dissoc res route) (get res route))
+        res)
+      query')))
 
 (defn- make-migrate-fn [migrate]
   (fn migrate-fn
@@ -300,6 +308,19 @@
     ([app-state-pure query tempids id-key]
      (merge (select-keys app-state-pure [::route])
        (migrate app-state-pure query tempids id-key)))))
+
+(defn- wrap-send [send]
+  (fn [remotes cb]
+    (send remotes
+      (fn send-cb
+        ([resp]
+         (if (== (count remotes) 1)
+           (cb resp (-> remotes first second))
+           (cb resp)))
+        ([resp query]
+         (cb resp query))
+        ([resp query remote]
+         (cb resp query remote))))))
 
 (defn- wrap-merge [merge-fn route->component]
   (fn [reconciler state novelty query]
@@ -347,7 +368,9 @@
             (swap! state merge route-info))
         new-cfg (merge cfg
                   {:migrate (make-migrate-fn migrate)
-                   :merge (wrap-merge (:merge cfg) route->component)})]
+                   :merge (wrap-merge (:merge cfg) route->component)}
+                  (when-not (nil? send)
+                    {:send (wrap-send send)}))]
     #?(:clj (swap! (:state reconciler) merge {:compassus$props root-class-props}))
     (assoc reconciler :config new-cfg)))
 

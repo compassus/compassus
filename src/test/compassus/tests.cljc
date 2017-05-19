@@ -4,7 +4,7 @@
                        [cljsjs.react.dom]
                        [goog.object :as gobj]]
                 :clj [[om.dom :as dom]])
-            [clojure.core.async :refer [<! close! chan take! #?@(:clj [go <!!])]]
+            [clojure.core.async :refer [<! close! put! chan take! #?@(:clj [go <!!])]]
             [clojure.test :refer [deftest testing is are use-fixtures #?(:cljs async)]]
             [om.next :as om :refer [defui ui]]
             [om.next.impl.parser :as parser]
@@ -972,7 +972,6 @@
 
 (deftest test-flat-remote-integration
   (let [remote-parser (om/parser {:read remote-flat-read})
-        c (chan)
         app (c/application
               {:routes {:index Home
                         :about About
@@ -984,8 +983,7 @@
                                                  :route-dispatch false})
                               :remotes [:some-remote]
                               :send (fn [{:keys [some-remote]} cb]
-                                      (cb (remote-parser {} some-remote))
-                                      (close! c))})})
+                                      (cb (remote-parser {} some-remote)))})})
         r (c/get-reconciler app)]
     (is (= (om/gather-sends (#'om/to-env r)
              (om/get-query (c/root-class app)) [:some-remote])
@@ -1098,3 +1096,80 @@
                   :home/content "Lorem ipsum dolor sit amet."}))
       (is (= (dissoc wrapper-props ::om/computed)
              (om/get-computed wrapper-props))))))
+
+(defn compassus-29-local-read
+  [{:keys [state query]} k _]
+  {:remote true})
+
+(defn compassus-29-remote-read
+  [_ k _]
+  {:value (cond-> posts-init-state
+            (= k :posts/list)
+            (get k))})
+
+(deftest test-compassus-29
+  (testing "Use current route's query in the send function"
+    (let [remote-parser (om/parser {:read compassus-29-remote-read})
+          app (c/application {:routes {:posts PostList}
+                              :reconciler
+                              (om/reconciler
+                                {:state {}
+                                 :merge c/compassus-merge
+                                 :send (fn [{:keys [remote]} cb]
+                                         (cb (remote-parser {} remote)))
+                                 :parser (c/parser {:read compassus-29-local-read})})})
+          r (c/get-reconciler app)]
+      (c/mount! app nil)
+      (is (contains? @r :posts/list))
+      (is (contains? @r :post/by-id))
+      (is (= (keys (:post/by-id @r)) [0 1]))
+      (is (= (:posts/list @r) [[:post/by-id 0] [:post/by-id 1]])))
+    (testing "works with `:route-dispatch false`"
+      (let [remote-parser (om/parser {:read compassus-29-remote-read})
+            app (c/application {:routes {:posts PostList}
+                                :reconciler
+                                (om/reconciler
+                                  {:state {}
+                                   :send (fn [{:keys [remote]} cb]
+                                           (cb (remote-parser {} remote)))
+                                   :parser (c/parser {:read compassus-29-local-read
+                                                      :route-dispatch false})})})
+            r (c/get-reconciler app)]
+        (c/mount! app nil)
+        (is (contains? @r :posts/list))
+        (is (contains? @r :post/by-id))
+        (is (= (keys (:post/by-id @r)) [0 1]))
+        (is (= (:posts/list @r) [[:post/by-id 0] [:post/by-id 1]])))))
+  (testing "works after remote updates"
+    (let [remote-parser (om/parser {:read compassus-29-remote-read
+                                    :mutate (fn [_ _ _]
+                                              {:action (constantly nil)})})
+          ch (chan)
+          #?@(:cljs [shallow-renderer (.createRenderer test-utils)])
+          app (c/application {:routes {:posts PostList}
+                              :reconciler
+                              (om/reconciler
+                                {:state {}
+                                 :merge c/compassus-merge
+                                 :root-unmount (fn [_])
+                                 #?@(:cljs [:root-render (fn [c target]
+                                                           (.render shallow-renderer c))])
+                                 :send (fn [{:keys [remote]} cb]
+                                         (cb (remote-parser {} remote))
+                                         (close! ch))
+                                 :parser (c/parser {:read compassus-29-local-read
+                                                    :mutate (fn [_ _ _]
+                                                              {:remote true})})})})
+          r (c/get-reconciler app)
+          c (c/mount! app :target)]
+      #?(:clj (p/-render c))
+      (reset! (-> r :config :state) (select-keys @r [::c/route]))
+      (swap! (:state r) assoc :remove (fn [] (println "why a i removing? 2222" )) )
+      (let [#?@(:cljs [st js/setTimeout])]
+        #?(:cljs (set! js/setTimeout (fn [f _] (f))))
+        (om/transact! r (into '[(some/mutation!)] [{::c/route-data {:posts (om/get-query PostList)}}]))
+        (is (contains? @r :posts/list))
+        (is (contains? @r :post/by-id))
+        (is (= (keys (:post/by-id @r)) [0 1]))
+        (is (= (:posts/list @r) [[:post/by-id 0] [:post/by-id 1]]))
+        #?(:cljs (set! js/setTimeout st))))))

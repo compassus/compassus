@@ -2,6 +2,11 @@
 
 ## [master](https://github.com/anmonteiro/compassus/compare/1.0.0-alpha3...HEAD) (unreleased)
 
+### Changes
+
+- Use current route's query by default if `send` doesn't pass one in the callback
+([#29](https://github.com/compassus/compassus/issues/29)).
+
 ## [1.0.0-alpha3](https://github.com/anmonteiro/compassus/compare/1.0.0-alpha2...1.0.0-alpha3) (2017-05-14)
 
 ### Changes
