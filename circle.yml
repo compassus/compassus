@@ -10,6 +10,10 @@ machine:
     version: 6.1.0
 
 dependencies:
+  cache_directories:
+    - "~/.boot/cache/lib"
+    - "~/.boot/cache/bin"
+    - "~/.m2"
   pre:
     - wget https://github.com/boot-clj/boot-bin/releases/download/latest/boot.sh
     - mv boot.sh boot && chmod a+x boot && sudo mv boot /usr/local/bin

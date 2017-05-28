@@ -3,18 +3,18 @@
 (set-env!
  :source-paths    #{"src/main"}
  :resource-paths  #{"resources"}
- :dependencies '[[org.clojure/clojure         "1.9.0-alpha16"  :scope "provided"]
-                 [org.clojure/clojurescript   "1.9.542"        :scope "provided"
+ :dependencies '[[org.clojure/clojure         "1.9.0-alpha17"  :scope "provided"]
+                 [org.clojure/clojurescript   "1.9.562"        :scope "provided"
                   :classifier "aot"]
-                 [org.clojure/clojurescript   "1.9.542"        :scope "provided"]
-                 [org.omcljs/om               "1.0.0-alpha48"  :scope "provided"]
-                 [cljsjs/react-with-addons    "15.5.0-0"       :scope "test"]
-                 [cljsjs/react-dom            "15.5.0-0"       :scope "test"]
+                 [org.clojure/clojurescript   "1.9.562"        :scope "provided"]
+                 [org.omcljs/om               "1.0.0-beta1"    :scope "provided"]
+                 [cljsjs/react-with-addons    "15.5.4-0"       :scope "test"]
+                 [cljsjs/react-dom            "15.5.4-0"       :scope "test"]
                  [com.cognitect/transit-clj   "0.8.300"        :scope "test"]
-                 [org.clojure/core.async      "0.3.442"        :scope "test"]
+                 [org.clojure/core.async      "0.3.443"        :scope "test"]
                  [devcards                    "0.2.3"          :scope "test"]
                  [com.cemerick/piggieback     "0.2.1"          :scope "test"]
-                 [pandeiro/boot-http          "0.8.0"          :scope "test"]
+                 [pandeiro/boot-http          "0.8.3"          :scope "test"]
                  [adzerk/boot-cljs            "2.0.0"          :scope "test"]
                  [adzerk/boot-cljs-repl       "0.3.3"          :scope "test"]
                  [adzerk/boot-test            "1.2.0"          :scope "test"]
