@@ -110,7 +110,7 @@ Here's an example:
      :index-route :index
      :reconciler (om/reconciler
                    {:state {}
-                    :parser (compassus/parser {:read read))})}))
+                    :parser (compassus/parser {:read read})})}))
 ```
 
 #### Implementing the parser
